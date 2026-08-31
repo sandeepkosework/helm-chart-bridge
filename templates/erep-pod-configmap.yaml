@@ -1,0 +1,78 @@
+{{- /*
+Template for the one-off erep Pod that erep-server creates on demand,
+replacing the docker.sock-spawned sibling container from the original
+compose (see erep-server's persistence entry in values.yaml and
+templates/rbac.yaml's "create" verb). Shipped as a ConfigMap (key:
+erep-pod.yaml), mounted into erep-server at /etc/erep-pod-template via its
+own configMap-type persistence entry — erep-server reads this manifest and
+POSTs it to the Kubernetes API, using its own ServiceAccount token, whenever
+a user triggers erep creation from the bridge application.
+
+Runs the same image/env as erep-server itself — no separate child-container
+image was ever declared for it. Carries the same tenant ServiceAccount so
+the spawned Pod can watch its own status and self-delete on completion
+(get/watch/list/delete — see rbac.yaml), without needing "create" itself.
+metadata.name is a generateName (not fixed) so each user-triggered erep
+creation gets its own Pod — the caller must use "create", not "apply", since
+generateName isn't supported by server-side apply.
+*/}}
+{{- $erep := index .Values.services "erep-server" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: erep-pod-template
+  labels:
+    {{- include "tenant-app.labels" . | nindent 4 }}
+data:
+  erep-pod.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      generateName: {{ printf "%s-erep-" .Values.tenant.id | lower }}
+      namespace: {{ .Release.Namespace }}
+      labels:
+        {{- include "tenant-app.labels" . | nindent 8 }}
+        app: erep-job
+    spec:
+      serviceAccountName: {{ include "tenant-app.name" . }}
+      restartPolicy: Never
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: erep
+          image: "{{ $erep.image.repository }}:{{ $erep.image.tag }}"
+          env:
+            {{- range $key, $value := $erep.env }}
+            - name: {{ $key }}
+              {{- if kindIs "map" $value }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-%s" $.Values.tenant.id ($value.secretName | default "erep-server-secret") }}
+                  key: {{ $value.secretKey }}
+                  optional: true
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-erep-server-secret" $.Values.tenant.id }}
+                  key: {{ $key }}
+                  optional: true
+              {{- end }}
+            {{- end }}
+          volumeMounts:
+            - name: erep-generated
+              mountPath: /app/generated-ereps
+            - name: erep-logs
+              mountPath: /app/logs
+          resources:
+            {{- toYaml $erep.resources | nindent 12 }}
+      volumes:
+        - name: erep-generated
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-erep-generated-pvc" .Values.tenant.id }}
+        - name: erep-logs
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-erep-logs-pvc" .Values.tenant.id }}

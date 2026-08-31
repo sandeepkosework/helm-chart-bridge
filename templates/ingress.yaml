@@ -1,0 +1,31 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "tenant-app.name" . }}
+  annotations:
+{{ toYaml .Values.ingress.annotations | indent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+{{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.tenant.domain }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+{{- end }}
+  rules:
+    - host: {{ .Values.tenant.domain }}
+      http:
+        paths:
+{{- range $name, $svc := .Values.services }}
+{{- if and $svc.enabled $svc.ingressPath }}
+          - path: {{ $svc.ingressPath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ printf "%s-%s" $.Values.tenant.id $name }}
+                port:
+                  number: {{ (index $svc.ports 0).containerPort }}
+{{- end }}
+{{- end }}
+{{- end }}

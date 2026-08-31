@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "tenant-app.name" . }}
+rules:
+  # Replaces the /var/run/docker.sock mounts previously used by
+  # bridge-cp-conductor and erep-server to manage sibling containers —
+  # docker.sock grants de-facto root on the node with no safe Kubernetes
+  # analog. get/watch/list/delete/create on pods lets erep-server create
+  # one-off erep Pods via the Kubernetes API instead (see erep-server's
+  # configMap persistence entry / templates/erep-pod-configmap.yaml), and
+  # lets a spawned Pod watch its own status and self-delete on completion.
+  # Every service in this chart shares this ServiceAccount (see
+  # serviceAccountName in templates/deployment.yaml), so this Role applies
+  # tenant-wide, not just to the two services that used docker.sock.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list", "delete", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "tenant-app.name" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "tenant-app.name" . }}
+roleRef:
+  kind: Role
+  name: {{ include "tenant-app.name" . }}
+  apiGroup: rbac.authorization.k8s.io

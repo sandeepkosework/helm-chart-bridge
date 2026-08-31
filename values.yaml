@@ -1,0 +1,1491 @@
+nameOverride: tenant-app
+# Placeholders — every real deployment MUST override tenant.* via a
+# per-tenant values file (see examples/). Left unset-looking on purpose so
+# an accidental `helm install` without -f fails loudly instead of silently
+# reusing another tenant's identity.
+tenant:
+  id: changeme
+  name: changeme
+  namespace: changeme
+  domain: changeme.qraie.ai
+imagePullSecrets:
+- ocir-registry
+storage:
+  createStorageClass: true
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ''
+# Org-wide secrets shared by every tenant (e.g. third-party API keys used
+# in common). Opt in per env var with `secretName: common-secrets`.
+commonSecrets:
+  enabled: true
+  secretName: common-secrets
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  remotePath: secret/common
+  refreshInterval: 1h
+# Secrets shared across all of one tenant's services but not shared with
+# other tenants (e.g. this tenant's DB password used by several services).
+# Opt in per env var with `secretName: tenant-secrets`. Defaults to Vault
+# path secret/tenants/<tenant.id> when remotePath is left unset.
+tenantSecrets:
+  enabled: true
+  secretName: tenant-secrets
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  remotePath: ""
+  refreshInterval: 1h
+# Secrets scoped to a single service of a single tenant. Generated
+# automatically for any service whose env has secret-ref (map) values, from
+# Vault path secret/tenants/<tenant.id>/<service> — this is the default an
+# env var falls back to when it omits `secretName` entirely.
+serviceSecrets:
+  enabled: true
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  refreshInterval: 1h
+persistence:
+  bridge-cp-wtl-sr-instances:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  redis-data:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  erep-generated:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  erep-logs:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  qraie-attachments:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  iot-vlm-deepface:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  iot-vlm-db:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  prism-videos:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  voxflow-agents:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  voxflow-mcp:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  radicale-data:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+services:
+  qraie-redis-shared:
+    enabled: true
+    image:
+      repository: redis
+      tag: '7'
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 6379
+    # Every other service that talks to this instance sends REDIS_PASSWORD —
+    # the real docker-compose enforces it via `redis-server --requirepass`,
+    # which the chart never carried over (this Deployment ran with no auth
+    # at all). command uses the Kubernetes $(VAR) env-substitution syntax,
+    # so REDIS_PASSWORD below must come from the same secret every client
+    # already reads, not a separately-managed value.
+    command:
+    - redis-server
+    - --requirepass
+    - $(REDIS_PASSWORD)
+    env:
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  qraie-redis:
+    enabled: true
+    image:
+      repository: redislabs/redisgears
+      tag: 1.2.5
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 6379
+    env: {}
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  bridge-cp-conductor:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/bridge-cp-conductor
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 8461
+    env:
+      VIRTUAL_HOST: tg.qraie.
+      VIRTUAL_PATH: /contpi/
+      VIRTUAL_PORT: '8461'
+      VIRTUAL_DEST: /
+      API_PORT: '8461'
+      REDIS_HOST: "{{ .Values.tenant.id }}-bridge-cp-conductor-redis"
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      REDIS_CONTAINER: protois
+      REDIS_DISPATCHER_PATH: /opt/bridge-cp-redis/dispatcher/master_dispatcher.py
+      SR_BASE_PATH: /opt/bridge-cp-wtl/sr-instances
+      SR_NAME: "bridge-cp-{{ .Values.tenant.id }}-sr"
+      GEMINI_MODEL: gemini-3-flash-preview
+      WORKPLACE_DM_SOCKET_URL: https://protot
+      WORKPLACE_DM_CLIENT_ID: QraieBot
+      WORKPLACE_DM_PASSWORD:
+        secretKey: WORKPLACE_DM_PASSWORD
+      NOTIF_ENG_BASE_URL: https://stagin
+    ingressPath: /controlopsv2/api/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: hostPath
+      path: /opt/bridge-cp-redis/dispatcher
+      mountPath: /opt/bridge-cp-redis/dispatcher
+      readOnly: false
+    - type: pvc
+      name: bridge-cp-wtl-sr-instances
+      mountPath: /opt/bridge-cp-wtl/sr-instances
+      readOnly: false
+    # /var/run/docker.sock hostPath mount removed here — grants de-facto
+    # root on the node with no safe Kubernetes analog. Unlike erep-server,
+    # bridge-cp-conductor has no on-demand Kubernetes-API replacement wired
+    # up (nothing here observed it actually spawning sibling containers at
+    # request time) — it still shares the tenant ServiceAccount (see
+    # templates/rbac.yaml) if that need shows up later.
+    - type: hostPath
+      path: /vault/secrets
+      mountPath: /vault/secrets
+      readOnly: true
+  bridge-cp-conductor-redis:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/bridge-cp-redis
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 6379
+    env: {}
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: pvc
+      name: bridge-cp-wtl-sr-instances
+      mountPath: /opt/bridge-cp-wtl/sr-instances
+      readOnly: false
+    - type: pvc
+      name: redis-data
+      mountPath: /data
+      readOnly: false
+    - type: hostPath
+      path: /opt/bridge-cp-redis/dispatcher
+      mountPath: /opt/bridge-cp-redis/dispatcher
+      readOnly: false
+  bridge:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/acetaxi-bridge
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30170
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '30170'
+      VIRTUAL_PATH: /
+      PORT: '30170'
+      NODE_ENV: production
+      GEMINI_MODEL: gemini-3.1-pro-preview
+    ingressPath: /
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: hostPath
+      path: /vault/secrets
+      mountPath: /vault/secrets
+      readOnly: true
+  controlops-server:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/controlops_server
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30172
+    env:
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /controlops/api/
+      VIRTUAL_PORT: '30172'
+      VIRTUAL_DEST: /
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis"
+      REDIS_PORT: '6379'
+      GLOBALAPIBASEURL: https://qraie_ai-b.qryde.n
+      API_PORT: '30172'
+      # controlops-server is a SQL Server (MSSQL) consumer, not Postgres —
+      # confirmed by its real docker-compose using DB_USER: sa and the
+      # classic MSSQL default port 1433. One shared in-cluster MSSQL
+      # instance (data namespace) hosts one database per tenant, matching
+      # the postgres/mongodb pattern already used for other shared DBs.
+      DB_HOST: mssql.data.svc.cluster.local
+      DB_USER:
+        secretKey: DB_USER
+      DB_PASSWORD:
+        secretKey: DB_PASSWORD
+      DB_NAME: "{{ .Values.tenant.id }}"
+      MONGODB_URI:
+        secretKey: MONGODB_URI
+    ingressPath: /controlops/api/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  erep-server:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/erep-server
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30174
+    env:
+      # erep-pod-configmap.yaml (the on-demand erep Pod spawned via the
+      # Kubernetes API) ranges directly over this env map — it does not go
+      # through deployment.yaml's TENANT_ID auto-inject fallback, so
+      # TENANT_ID has to be set explicitly here for the spawned Pod to get it.
+      TENANT_ID: '{{ .Values.tenant.id | upper }}'
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: https://qraie_ai-b.qryde.n
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /galaxy/erepapi/
+      VIRTUAL_DEST: /
+      VIRTUAL_PORT: '30174'
+      PORT: '30174'
+      NODE_ENV: production
+      BASE_URL: https://qraie_ai-b.qryde.n
+      MONGODB_URI:
+        secretKey: MONGODB_URI
+      # Was 'true' when docker.sock was mounted below — erep-server no
+      # longer talks to Docker directly, it creates erep Pods via the
+      # Kubernetes API instead (see the configMap persistence entry below
+      # and templates/erep-pod-configmap.yaml).
+      DOCKER_ENABLED: 'false'
+      LOG_LEVEL: info
+    ingressPath: /galaxy/erepapi/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: pvc
+      name: erep-generated
+      mountPath: /app/generated-ereps
+      readOnly: false
+    - type: pvc
+      name: erep-logs
+      mountPath: /app/logs
+      readOnly: false
+    # /var/run/docker.sock hostPath mount removed here — replaced by the
+    # erep-pod-template ConfigMap below (see templates/erep-pod-configmap.yaml
+    # and templates/rbac.yaml's "create" verb). erep-server reads the
+    # mounted erep-pod.yaml and creates one-off erep Pods via the Kubernetes
+    # API instead of talking to Docker directly.
+    - type: configMap
+      name: erep-pod-template
+      mountPath: /etc/erep-pod-template
+      readOnly: true
+  qraie-api-gateway:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/qraie-api-gateway-v4-stg
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30176
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /workplace/api/
+      VIRTUAL_PORT: '30176'
+      VIRTUAL_DEST: /
+    ingressPath: /workplace/api/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: pvc
+      name: qraie-attachments
+      mountPath: /src/attachment/
+      readOnly: false
+    - type: pvc
+      name: qraie-attachments
+      mountPath: /src/app/attachment
+      readOnly: false
+    - type: pvc
+      name: qraie-attachments
+      mountPath: /src/app/uploads
+      readOnly: false
+  microservice-qraie:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/qraiebot-microservice-v4-stg
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 80
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: pvc
+      name: qraie-attachments
+      mountPath: /src/attachment/
+      readOnly: false
+    - type: pvc
+      name: qraie-attachments
+      mountPath: /src/app/uploads
+      readOnly: false
+  qraie-ui:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/qraie-ui-hbss-v4-stg
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30180
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /workplace/
+      VIRTUAL_PORT: '30180'
+      VIRTUAL_DEST: /
+      PORT: '30180'
+    ingressPath: /workplace/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  admin-panel:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/qraie-admin-panel
+      tag: bridge
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30182
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      NODE_ENV: development
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /workplace/admin-portal/
+      VIRTUAL_PORT: '30182'
+      VIRTUAL_DEST: /
+      PORT: '30182'
+      NEXT_PUBLIC_VERSION: 1.0.1
+    ingressPath: /workplace/admin-portal/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  wfm-api-gateway:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/fabreq_gateway
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30184
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      SERVER_PORT: '30184'
+      SERVER_HOST: 0.0.0.0
+      NODE_ENV: development
+      SERVER_NAME: wfm-gateway
+      FABREQ_COMMAND_ENDPOINT_MAP: http://{{ .Values.tenant.id }}-wfm-microservice:9001
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /organization/wfm/api/
+      VIRTUAL_PORT: '30184'
+      VIRTUAL_DEST: /
+      PORT: '30184'
+      ALLOWED_ORIGINS: '*'
+      LOG_LEVEL: debug
+      TZ: America/New_York
+    ingressPath: /organization/wfm/api/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  wfm-ui:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/wfm-ui
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30188
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      SERVER_HOST: 0.0.0.0
+      NODE_ENV: development
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /organization/wfm/
+      VIRTUAL_PORT: '30188'
+      PORT: '30188'
+      VIRTUAL_DEST: /
+      NEXT_PUBLIC_SOCKET_URL: https://protote-bridg
+      NEXT_PUBLIC_VERSION: 1.0.1
+      TZ: America/New_York
+    ingressPath: /organization/wfm/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  wfm-microservice:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/fabreq-microservice
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 9001
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      SERVER_PORT: '9001'
+      SERVER_HOST: 0.0.0.0
+      NODE_ENV: development
+      MICROSERVICE_NAME: wfm-microservice
+      TENANT_KEY: wfm
+      TENANT_IDS: prototype
+      CONFIG_API_URL: https://qraie_ai-b.qryde
+      JWT_SECRETS_MAP:
+        secretKey: JWT_SECRETS_MAP
+      GLOBAL_CONN_POOL_CONFIG: '{"enableStatistics": true, "queueTimeout": 240000,
+        "poolIncrement": 2}'
+      TZ: America/New_York
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  mcp-server:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/mcp_server
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 10011
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      PORT: '10011'
+      MCP_SERVER_PORT: '10011'
+      TZ: America/New_York
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  mcp-client:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/mcp_client
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30192
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /galaxy/slmapi/
+      VIRTUAL_PORT: '30192'
+      VIRTUAL_DEST: /
+      PORT: '30192'
+      MCP_SERVER_URL: http://{{ .Values.tenant.id }}-mcp-server:10011/mcp
+      CONF_URL: https://qraie_ai-b.qryde
+      TZ: America/New_York
+    ingressPath: /galaxy/slmapi/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  tranops-ui:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/tranops-ui
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30194
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /tranops
+      VIRTUAL_DEST: /tranops
+      VIRTUAL_PORT: '30194'
+      PORT: '30194'
+      BASE_URL: /tranops
+      VITE_API_URL: https://protote-bridgestg.qrai
+      VITE_WS_URL: https://protote-bridgestg.qr
+    ingressPath: /tranops
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  tranops-backend:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/tranops-backend
+      tag: prototype
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30196
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      SLM_API_URL: https://slm-kb.qraie.
+      SLM_USERNAME: bridgeUser
+      SLM_PASSWORD:
+        secretKey: SLM_PASSWORD
+      MONGODB_URI:
+        secretKey: MONGODB_URI
+      JWT_SECRET:
+        secretKey: JWT_SECRET
+      JWT_EXPIRES_IN:
+        secretKey: JWT_EXPIRES_IN
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /tranops/api
+      VIRTUAL_DEST: /api
+      VIRTUAL_PORT: '30196'
+      API_PORT: '30196'
+      ELEVENLABS_API_KEY:
+        secretKey: ELEVENLABS_API_KEY
+      ELEVENLABS_API_URL: https://api.elevenlabs.
+      AGENTS_API_URL: "https://{{ .Values.tenant.domain }}"
+      POLLING_INTERVAL_MS: '30000'
+      MCP_SERVER_URL: https://mcp-slm-client.qryde.net/get_conversatio
+    ingressPath: /tranops/api
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  iot-broker-data:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-broker-data-service
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 3001
+    env:
+      NODE_ENV: production
+      PORT: '3001'
+      MONGODB_URI:
+        secretKey: MONGODB_URI
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /iot-broker/api/data/
+      VIRTUAL_DEST: /api/data/
+      VIRTUAL_PORT: '3001'
+      IOT_VLM_BASE_URL: "https://{{ .Values.tenant.domain }}/enrollment"
+      BROKER_SERVICE_URL: http://iot-broker-broker:3003
+      LOCONAV_WEBHOOK_SECRET:
+        secretKey: LOCONAV_WEBHOOK_SECRET
+      LOCONAV_WEBHOOK_SECRETS:
+        secretKey: LOCONAV_WEBHOOK_SECRETS
+      LOCONAV_WEBHOOK_AUTO_CREATE_DEVICE: ${LOCONAV_WEBHOOK_AUTO_CREATE_DEVICE:-false}
+      LOCONAV_WEBHOOK_ALLOW_INSECURE: ${LOCONAV_WEBHOOK_ALLOW_INSECURE:-false}
+    ingressPath: /iot-broker/api/data/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  iot-broker-config:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-broker-config-service
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 3002
+    env:
+      NODE_ENV: production
+      PORT: '3002'
+      MONGODB_URI:
+        secretKey: MONGODB_URI
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /iot-broker/api/config/
+      VIRTUAL_DEST: /api/config/
+      VIRTUAL_PORT: '3002'
+    ingressPath: /iot-broker/api/config/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  iot-broker-broker:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-broker-broker-service
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 3003
+    env:
+      NODE_ENV: production
+      PORT: '3003'
+      LOG_LEVEL: debug
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /iot-broker/
+      VIRTUAL_DEST: /
+      VIRTUAL_PORT: '3003'
+      DATA_SERVICE_URL: http://{{ .Values.tenant.id }}-iot-broker-data:3001
+      CONFIG_SERVICE_URL: http://{{ .Values.tenant.id }}-iot-broker-config:3002
+      WEB_PORTAL_URL: http://{{ .Values.tenant.id }}-iot-broker-web:80
+      SOCKET_IO_PATH: /socket.io
+      FRONTEND_URL: '*'
+    ingressPath: /iot-broker/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  iot-broker-admin:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 80
+    env:
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /iot-broker/admin/
+      VIRTUAL_DEST: /
+      VIRTUAL_PORT: '80'
+      FRONTEND_URL: "https://{{ .Values.tenant.domain }}"
+      BASE_URL: "https://{{ .Values.tenant.domain }}"
+      PUBLIC_URL: "https://{{ .Values.tenant.domain }}"
+    ingressPath: /iot-broker/admin/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  iot-broker-web:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-broker-web-portal
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 80
+    env:
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_DEST: /
+      VIRTUAL_PORT: '80'
+      FRONTEND_URL: "https://{{ .Values.tenant.domain }}"
+      BASE_URL: "https://{{ .Values.tenant.domain }}"
+      PUBLIC_URL: "https://{{ .Values.tenant.domain }}"
+      VITE_BASE_PATH: /iot-broker/
+      VITE_DATA_SERVICE_URL: "https://{{ .Values.tenant.domain }}/iot-broker/api/data"
+      VITE_SOCKET_URL: "https://{{ .Values.tenant.domain }}"
+      VITE_SOCKET_IO_PATH: /iot-broker/socket.io
+      VITE_WEB_PORTAL_URL: "https://{{ .Values.tenant.domain }}/iot-broker/"
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  iot-broker-loconav-vision:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-broker-loconav-vision-gateway
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 3040
+    env:
+      NODE_ENV: production
+      PORT: '3040'
+      DATA_SERVICE_URL: http://iot-broker-data-prototype:3001
+      FRONTEND_URL: '*'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /vision
+      VIRTUAL_PORT: '3040'
+    ingressPath: /vision
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  enrollment-api:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/iot-vlm
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 3003
+    env:
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PATH: /enrollment/
+      VIRTUAL_DEST: /
+      VIRTUAL_PORT: '3003'
+      SML_BASE_URL: https://qraie-demo.qryde.n
+      REDIS_URL:
+        secretKey: REDIS_URL
+      IOT_BROKER_URL: "https://{{ .Values.tenant.domain }}/iot-broker/"
+    ingressPath: /enrollment/
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: pvc
+      name: iot-vlm-deepface
+      mountPath: /root/.deepface
+      readOnly: false
+    - type: pvc
+      name: iot-vlm-db
+      mountPath: /app/db
+      readOnly: false
+  acl-server:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/acl-server
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 28077
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '28077'
+      VIRTUAL_DEST: /api
+      VIRTUAL_PATH: /acl_server/api
+      PORT: '28077'
+    ingressPath: /acl_server/api
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  prism-ui:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/prism-ui
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 28080
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '28080'
+      VIRTUAL_DEST: /
+      VIRTUAL_PATH: /prism-ui
+      PORT: '28080'
+      VITE_API_URL: "https://{{ .Values.tenant.domain }}/prism/api"
+    ingressPath: /prism-ui
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  prism-backend:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/prism-backend
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 28078
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '28078'
+      VIRTUAL_DEST: /
+      VIRTUAL_PATH: /prism/api
+      PORT: '28078'
+      VIDEOS_DIR: /data/prism-videos
+    ingressPath: /prism/api
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: hostPath
+      path: /vault/secrets
+      mountPath: /vault/secrets
+      readOnly: true
+    - type: pvc
+      name: prism-videos
+      mountPath: /data/prism-videos
+      readOnly: false
+  prism-scanner:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/prism-scanner
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 28079
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '28079'
+      VIRTUAL_DEST: /
+      VIRTUAL_PATH: /prism-scanner
+      PORT: '28079'
+      VITE_API_URL: "https://{{ .Values.tenant.domain }}/prism/api"
+    ingressPath: /prism-scanner
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence: []
+  voxflow:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/voxflow
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 30524
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: http://192.168.85.194:10
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '30524'
+      VIRTUAL_DEST: /voxflow
+      VIRTUAL_PATH: /voxflow
+      BASE_PATH: /voxflow
+      RIDE_API_AUTH_TOKEN:
+        secretKey: RIDE_API_AUTH_TOKEN
+      PORT: '30524'
+    ingressPath: /voxflow
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: pvc
+      name: voxflow-agents
+      mountPath: /app/agents
+      readOnly: false
+    - type: pvc
+      name: voxflow-mcp
+      mountPath: /app/mcp
+      readOnly: false
+    - type: hostPath
+      path: /vault/secrets
+      mountPath: /vault/secrets
+      readOnly: true
+  scheduler-agent:
+    enabled: true
+    image:
+      repository: iad.ocir.io/hbssoc/schedular-agent
+      tag: stg
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 4200
+    env:
+      REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
+      REDIS_PORT: '30168'
+      REDIS_PASSWORD:
+        secretKey: REDIS_PASSWORD
+      GLOBALAPIBASEURL: https://qraie_ai-b.qryde.n
+      ACTIVE_COLOR: ''
+      START_PORT: '30166'
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '4200'
+      VIRTUAL_DEST: /api
+      VIRTUAL_PATH: /scheduler-agent/api
+      PORT: '4200'
+      RADICALE_BASE_URL: http://{{ .Values.tenant.id }}-radicale:5232
+      RADICALE_AGENT_USER: scheduler-agent
+      RADICALE_AGENT_PASS:
+        secretKey: RADICALE_AGENT_PASS
+      SESSION_TTL_MINUTES: '30'
+      CONDUCTOR_BASE_URL: http://{{ .Values.tenant.id }}-bridge-cp-conductor:8461
+      CONDUCTOR_API_KEY:
+        secretKey: CONDUCTOR_API_KEY
+      PRISM_BASE_URL: http://event-manager:4000
+      PRISM_POLL_INTERVAL_MS: '30000'
+      PRISM_BRIDGE_ENABLED: '1'
+      CORS_ORIGINS: http://localhost:3000,http://localhost:8461
+      MEETING_API_URL: https://qr-avbe.hbssweb.com/ro
+      MEETING_API_KEY:
+        secretKey: MEETING_API_KEY
+        secretName: common-secrets
+      MEETING_JOIN_BASE_URL: https://qr-video.hbssweb.com/ca
+    ingressPath: /scheduler-agent/api
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: hostPath
+      path: /vault/secrets
+      mountPath: /vault/secrets
+      readOnly: true
+  radicale:
+    enabled: true
+    image:
+      repository: tomsquest/docker-radicale
+      tag: 3.3.3.0
+      pullPolicy: IfNotPresent
+    replicas: 1
+    ports:
+    - name: p0
+      containerPort: 5232
+    env:
+      RADICALE_CONFIG: /config/config
+      VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
+      VIRTUAL_PORT: '5232'
+      VIRTUAL_DEST: /
+    ingressPath: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    persistence:
+    - type: configMap
+      name: radicale-config
+      mountPath: /config/config
+      readOnly: true
+    - type: configMap
+      name: radicale-rights
+      mountPath: /config/rights
+      readOnly: true
+    - type: pvc
+      name: radicale-data
+      mountPath: /data
+      readOnly: false
+    - type: hostPath
+      path: /vault/secrets
+      mountPath: /vault/secrets
+      readOnly: true

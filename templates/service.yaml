@@ -1,0 +1,21 @@
+{{- range $name, $svc := .Values.services }}
+{{- if and $svc.enabled $svc.ports }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-%s" $.Values.tenant.id $name }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "tenant-app.name" $ }}
+    app.kubernetes.io/component: {{ $name }}
+  ports:
+{{- range $p := $svc.ports }}
+    - name: {{ $p.name }}
+      port: {{ $p.containerPort }}
+      targetPort: {{ $p.containerPort }}
+      protocol: TCP
+{{- end }}
+---
+{{- end }}
+{{- end }}

@@ -1,0 +1,18 @@
+{{- range $name, $p := .Values.persistence }}
+{{- if $p.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ printf "%s-%s-pvc" $.Values.tenant.id $name }}
+  labels:
+    {{- include "tenant-app.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+{{ toYaml $p.accessModes | indent 4 }}
+  storageClassName: {{ $p.storageClass | default $.Values.storage.storageClass | default (printf "%s-sc" $.Values.tenant.id) }}
+  resources:
+    requests:
+      storage: {{ $p.size }}
+---
+{{- end }}
+{{- end }}
