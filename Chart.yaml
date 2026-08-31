@@ -1,6 +1,8 @@
 apiVersion: v2
-name: tenant-app
+name: helm-chart-bridge
 description: Generic multi-tenant Helm chart for the Bridge tenant stack
 type: application
-version: 0.2.0
+version: 0.2.1
 appVersion: "1.0"
+annotations:
+  org.opencontainers.image.source: https://github.com/sandeepkosework/helm-chart-bridge

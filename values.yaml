@@ -177,8 +177,8 @@ services:
   bridge-cp-conductor:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/bridge-cp-conductor
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -278,8 +278,8 @@ services:
   bridge:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/acetaxi-bridge
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -321,8 +321,8 @@ services:
   controlops-server:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/controlops_server
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -368,8 +368,8 @@ services:
   erep-server:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/erep-server
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -438,8 +438,8 @@ services:
   qraie-api-gateway:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/qraie-api-gateway-v4-stg
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -487,8 +487,8 @@ services:
   microservice-qraie:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/qraiebot-microservice-v4-stg
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -528,8 +528,8 @@ services:
   qraie-ui:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/qraie-ui-hbss-v4-stg
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -566,8 +566,8 @@ services:
   admin-panel:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/qraie-admin-panel
-      tag: bridge
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -606,8 +606,8 @@ services:
   wfm-api-gateway:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/fabreq_gateway
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -652,8 +652,8 @@ services:
   wfm-ui:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/wfm-ui
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -695,8 +695,8 @@ services:
   wfm-microservice:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/fabreq-microservice
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -740,8 +740,8 @@ services:
   mcp-server:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/mcp_server
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -776,8 +776,8 @@ services:
   mcp-client:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/mcp_client
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -817,8 +817,8 @@ services:
   tranops-ui:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/tranops-ui
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -858,8 +858,8 @@ services:
   tranops-backend:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/tranops-backend
-      tag: prototype
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -912,8 +912,8 @@ services:
   iot-broker-data:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-data-service
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -954,8 +954,8 @@ services:
   iot-broker-config:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-config-service
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -988,8 +988,8 @@ services:
   iot-broker-broker:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-broker-service
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1026,8 +1026,8 @@ services:
   iot-broker-admin:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1059,8 +1059,8 @@ services:
   iot-broker-web:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-web-portal
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1096,8 +1096,8 @@ services:
   iot-broker-loconav-vision:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-loconav-vision-gateway
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1129,8 +1129,8 @@ services:
   enrollment-api:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/iot-vlm
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1171,8 +1171,8 @@ services:
   acl-server:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/acl-server
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1209,8 +1209,8 @@ services:
   prism-ui:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/prism-ui
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1248,8 +1248,8 @@ services:
   prism-backend:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/prism-backend
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1295,8 +1295,8 @@ services:
   prism-scanner:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/prism-scanner
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1334,8 +1334,8 @@ services:
   voxflow:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/voxflow
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1387,8 +1387,8 @@ services:
   scheduler-agent:
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/schedular-agent
-      tag: stg
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1446,8 +1446,8 @@ services:
   radicale:
     enabled: true
     image:
-      repository: tomsquest/docker-radicale
-      tag: 3.3.3.0
+      repository: nginx
+      tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
