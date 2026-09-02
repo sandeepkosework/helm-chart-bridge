@@ -17,13 +17,14 @@ spec:
     - host: {{ .Values.tenant.domain }}
       http:
         paths:
-{{- range $name, $svc := .Values.services }}
-{{- if and $svc.enabled $svc.ingressPath }}
+{{- range $svc := .Values.services }}
+{{- $name := $svc.name }}
+{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.ingressPath }}
           - path: {{ $svc.ingressPath }}
             pathType: Prefix
             backend:
               service:
-                name: {{ printf "%s-%s" $.Values.tenant.id $name }}
+                name: {{ printf "%s-%s" (include "tenant-app.slug" $) $name }}
                 port:
                   number: {{ (index $svc.ports 0).containerPort }}
 {{- end }}

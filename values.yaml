@@ -21,26 +21,43 @@ ingress:
   tls:
     enabled: false
     secretName: ''
+# Vault connection for this tenant's own SecretStore (templates/secretstore.yaml)
+# -- one namespaced SecretStore per tenant release, authenticating via
+# Kubernetes auth with a namespace-label-selector-bound role, rather than a
+# single cluster-wide ClusterSecretStore + static token. This is what lets a
+# brand-new tenant namespace authenticate to Vault with zero manual `vault
+# write` step beyond the one-time cluster setup (see doc). The Argo CD
+# ApplicationSet deploying this chart must stamp `vault.namespaceLabel`'s
+# key/value (see below) onto the tenant namespace via
+# syncPolicy.managedNamespaceMetadata.labels for the role's selector to match.
+vault:
+  server: http://vault.vault.svc:8200
+  path: secret
+  version: v2
+  mountPath: kubernetes
+  role: qraie-bridge
+  namespaceLabel:
+    key: qraie-bridge-tenant
+    value: "true"
 # Org-wide secrets shared by every tenant (e.g. third-party API keys used
-# in common). Opt in per env var with `secretName: common-secrets`.
+# in common). Disabled by default -- every service's env now always reads
+# from its own fixed per-service Vault path (see serviceSecrets below); no
+# per-key redirect to a shared secret exists anymore (removed along with
+# the services: map -> list conversion, since Helm can no longer deep-merge
+# a per-tenant override onto a list). Only enable this if something is
+# actually wired to read from it.
 commonSecrets:
-  enabled: true
+  enabled: false
   secretName: common-secrets
-  secretStoreRef:
-    name: vault-backend
-    kind: ClusterSecretStore
   remotePath: secret/common
   refreshInterval: 1h
 # Secrets shared across all of one tenant's services but not shared with
-# other tenants (e.g. this tenant's DB password used by several services).
-# Opt in per env var with `secretName: tenant-secrets`. Defaults to Vault
-# path secret/tenants/<tenant.id> when remotePath is left unset.
+# other tenants. Disabled by default for the same reason as commonSecrets
+# above -- nothing references it now that per-key secretName redirects are
+# gone.
 tenantSecrets:
-  enabled: true
+  enabled: false
   secretName: tenant-secrets
-  secretStoreRef:
-    name: vault-backend
-    kind: ClusterSecretStore
   remotePath: ""
   refreshInterval: 1h
 # Secrets scoped to a single service of a single tenant. Generated
@@ -49,9 +66,6 @@ tenantSecrets:
 # env var falls back to when it omits `secretName` entirely.
 serviceSecrets:
   enabled: true
-  secretStoreRef:
-    name: vault-backend
-    kind: ClusterSecretStore
   refreshInterval: 1h
 persistence:
   bridge-cp-wtl-sr-instances:
@@ -109,8 +123,9 @@ persistence:
     size: 10Gi
     accessModes:
     - ReadWriteOnce
+disabledServices: []
 services:
-  qraie-redis-shared:
+  - name: qraie-redis-shared
     enabled: true
     image:
       repository: redis
@@ -148,7 +163,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  qraie-redis:
+  - name: qraie-redis
     enabled: true
     image:
       repository: redislabs/redisgears
@@ -174,7 +189,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  bridge-cp-conductor:
+  - name: bridge-cp-conductor
     enabled: true
     image:
       repository: nginx
@@ -237,7 +252,7 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
-  bridge-cp-conductor-redis:
+  - name: bridge-cp-conductor-redis
     enabled: true
     image:
       repository: iad.ocir.io/hbssoc/bridge-cp-redis
@@ -275,7 +290,7 @@ services:
       path: /opt/bridge-cp-redis/dispatcher
       mountPath: /opt/bridge-cp-redis/dispatcher
       readOnly: false
-  bridge:
+  - name: bridge
     enabled: true
     image:
       repository: nginx
@@ -318,7 +333,7 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
-  controlops-server:
+  - name: controlops-server
     enabled: true
     image:
       repository: nginx
@@ -365,7 +380,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  erep-server:
+  - name: erep-server
     enabled: true
     image:
       repository: nginx
@@ -435,7 +450,7 @@ services:
       name: erep-pod-template
       mountPath: /etc/erep-pod-template
       readOnly: true
-  qraie-api-gateway:
+  - name: qraie-api-gateway
     enabled: true
     image:
       repository: nginx
@@ -484,7 +499,7 @@ services:
       name: qraie-attachments
       mountPath: /src/app/uploads
       readOnly: false
-  microservice-qraie:
+  - name: microservice-qraie
     enabled: true
     image:
       repository: nginx
@@ -525,7 +540,7 @@ services:
       name: qraie-attachments
       mountPath: /src/app/uploads
       readOnly: false
-  qraie-ui:
+  - name: qraie-ui
     enabled: true
     image:
       repository: nginx
@@ -563,7 +578,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  admin-panel:
+  - name: admin-panel
     enabled: true
     image:
       repository: nginx
@@ -603,7 +618,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  wfm-api-gateway:
+  - name: wfm-api-gateway
     enabled: true
     image:
       repository: nginx
@@ -649,7 +664,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  wfm-ui:
+  - name: wfm-ui
     enabled: true
     image:
       repository: nginx
@@ -692,7 +707,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  wfm-microservice:
+  - name: wfm-microservice
     enabled: true
     image:
       repository: nginx
@@ -737,7 +752,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  mcp-server:
+  - name: mcp-server
     enabled: true
     image:
       repository: nginx
@@ -773,7 +788,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  mcp-client:
+  - name: mcp-client
     enabled: true
     image:
       repository: nginx
@@ -814,7 +829,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  tranops-ui:
+  - name: tranops-ui
     enabled: true
     image:
       repository: nginx
@@ -855,7 +870,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  tranops-backend:
+  - name: tranops-backend
     enabled: true
     image:
       repository: nginx
@@ -909,7 +924,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  iot-broker-data:
+  - name: iot-broker-data
     enabled: true
     image:
       repository: nginx
@@ -951,7 +966,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  iot-broker-config:
+  - name: iot-broker-config
     enabled: true
     image:
       repository: nginx
@@ -985,7 +1000,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  iot-broker-broker:
+  - name: iot-broker-broker
     enabled: true
     image:
       repository: nginx
@@ -1023,7 +1038,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  iot-broker-admin:
+  - name: iot-broker-admin
     enabled: true
     image:
       repository: nginx
@@ -1056,7 +1071,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  iot-broker-web:
+  - name: iot-broker-web
     enabled: true
     image:
       repository: nginx
@@ -1093,7 +1108,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  iot-broker-loconav-vision:
+  - name: iot-broker-loconav-vision
     enabled: true
     image:
       repository: nginx
@@ -1126,7 +1141,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  enrollment-api:
+  - name: enrollment-api
     enabled: true
     image:
       repository: nginx
@@ -1168,7 +1183,7 @@ services:
       name: iot-vlm-db
       mountPath: /app/db
       readOnly: false
-  acl-server:
+  - name: acl-server
     enabled: true
     image:
       repository: nginx
@@ -1206,7 +1221,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  prism-ui:
+  - name: prism-ui
     enabled: true
     image:
       repository: nginx
@@ -1245,7 +1260,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  prism-backend:
+  - name: prism-backend
     enabled: true
     image:
       repository: nginx
@@ -1292,7 +1307,7 @@ services:
       name: prism-videos
       mountPath: /data/prism-videos
       readOnly: false
-  prism-scanner:
+  - name: prism-scanner
     enabled: true
     image:
       repository: nginx
@@ -1331,7 +1346,7 @@ services:
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     persistence: []
-  voxflow:
+  - name: voxflow
     enabled: true
     image:
       repository: nginx
@@ -1384,7 +1399,7 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
-  scheduler-agent:
+  - name: scheduler-agent
     enabled: true
     image:
       repository: nginx
@@ -1443,7 +1458,7 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
-  radicale:
+  - name: radicale
     enabled: true
     image:
       repository: nginx

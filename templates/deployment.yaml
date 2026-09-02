@@ -1,5 +1,6 @@
-{{- range $name, $svc := .Values.services }}
-{{- if $svc.enabled }}
+{{- range $svc := .Values.services }}
+{{- $name := $svc.name }}
+{{- if eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,6 +17,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "tenant-app.name" $ }}
+        app.kubernetes.io/instance: {{ $.Release.Name }}
         app.kubernetes.io/component: {{ $name }}
         tenant: {{ $.Values.tenant.name | quote }}
     spec:
@@ -52,11 +54,10 @@ spec:
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
+                  name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
 {{- if kindIs "map" $value }}
-                  name: {{ printf "%s-%s" $.Values.tenant.id ($value.secretName | default (printf "%s-secret" $name)) }}
                   key: {{ $value.secretKey }}
 {{- else }}
-                  name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
                   key: {{ $key }}
 {{- end }}
                   optional: true

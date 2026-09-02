@@ -1,9 +1,10 @@
-{{- range $name, $svc := .Values.services }}
-{{- if and $svc.enabled $svc.ports }}
+{{- range $svc := .Values.services }}
+{{- $name := $svc.name }}
+{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.ports }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ printf "%s-%s" $.Values.tenant.id $name }}
+  name: {{ printf "%s-%s" (include "tenant-app.slug" $) $name }}
 spec:
   type: ClusterIP
   selector:

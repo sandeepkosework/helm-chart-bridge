@@ -16,7 +16,10 @@ metadata.name is a generateName (not fixed) so each user-triggered erep
 creation gets its own Pod — the caller must use "create", not "apply", since
 generateName isn't supported by server-side apply.
 */}}
-{{- $erep := index .Values.services "erep-server" }}
+{{- $erep := dict }}
+{{- range .Values.services }}
+{{- if eq .name "erep-server" }}{{ $erep = . }}{{- end }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -48,19 +51,15 @@ data:
           env:
             {{- range $key, $value := $erep.env }}
             - name: {{ $key }}
-              {{- if kindIs "map" $value }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ printf "%s-%s" $.Values.tenant.id ($value.secretName | default "erep-server-secret") }}
-                  key: {{ $value.secretKey }}
-                  optional: true
-              {{- else }}
               valueFrom:
                 secretKeyRef:
                   name: {{ printf "%s-erep-server-secret" $.Values.tenant.id }}
+                  {{- if kindIs "map" $value }}
+                  key: {{ $value.secretKey }}
+                  {{- else }}
                   key: {{ $key }}
+                  {{- end }}
                   optional: true
-              {{- end }}
             {{- end }}
           volumeMounts:
             - name: erep-generated

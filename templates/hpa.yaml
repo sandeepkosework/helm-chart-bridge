@@ -1,5 +1,6 @@
-{{- range $name, $svc := .Values.services }}
-{{- if and $svc.enabled $svc.autoscaling.enabled }}
+{{- range $svc := .Values.services }}
+{{- $name := $svc.name }}
+{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
