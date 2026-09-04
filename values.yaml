@@ -255,8 +255,8 @@ services:
   - name: bridge-cp-conductor-redis
     enabled: true
     image:
-      repository: iad.ocir.io/hbssoc/bridge-cp-redis
-      tag: stg
+      repository: redis
+      tag: '7'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
