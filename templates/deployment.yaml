@@ -48,7 +48,6 @@ spec:
                 secretKeyRef:
                   name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
                   key: TENANT_ID
-                  optional: true
 {{- end }}
 {{- range $key, $value := $svc.env }}
             - name: {{ $key }}
@@ -60,7 +59,6 @@ spec:
 {{- else }}
                   key: {{ $key }}
 {{- end }}
-                  optional: true
 {{- end }}
           resources:
 {{ toYaml $svc.resources | indent 12 }}
