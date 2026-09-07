@@ -67,15 +67,19 @@ spec:
 {{- if $svc.persistence }}
           volumeMounts:
 {{- range $v := $svc.persistence }}
-            - name: {{ printf "%s-%s" $name ($v.mountPath | replace "/" "-" | replace "." "-" | trimAll "-") | trunc 63 | trimSuffix "-" }}
+            - name: {{ printf "%s-%s" $name $v.name | trunc 63 | trimSuffix "-" }}
               mountPath: {{ $v.mountPath }}
               readOnly: {{ default false $v.readOnly }}
 {{- end }}
 {{- end }}
 {{- if $svc.persistence }}
       volumes:
+{{- $seenVolumes := dict }}
 {{- range $v := $svc.persistence }}
-        - name: {{ printf "%s-%s" $name ($v.mountPath | replace "/" "-" | replace "." "-" | trimAll "-") | trunc 63 | trimSuffix "-" }}
+{{- $volName := printf "%s-%s" $name $v.name | trunc 63 | trimSuffix "-" }}
+{{- if not (hasKey $seenVolumes $volName) }}
+{{- $_ := set $seenVolumes $volName true }}
+        - name: {{ $volName }}
 {{- if eq $v.type "pvc" }}
           persistentVolumeClaim:
             claimName: {{ printf "%s-%s-pvc" $.Values.tenant.id $v.name }}
@@ -87,6 +91,7 @@ spec:
           configMap:
             name: {{ $v.name }}
             optional: true
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
