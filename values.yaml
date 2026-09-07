@@ -306,7 +306,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '30170'
@@ -401,7 +400,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: https://qraie_ai-b.qryde.n
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /galaxy/erepapi/
@@ -466,7 +464,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /workplace/api/
@@ -515,7 +512,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
     ingressPath: null
     resources:
@@ -556,7 +552,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /workplace/
@@ -594,7 +589,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       NODE_ENV: development
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
@@ -634,7 +628,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       SERVER_PORT: '30184'
       SERVER_HOST: 0.0.0.0
@@ -680,7 +673,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       SERVER_HOST: 0.0.0.0
       NODE_ENV: development
@@ -723,7 +715,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       SERVER_PORT: '9001'
       SERVER_HOST: 0.0.0.0
@@ -768,7 +759,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       PORT: '10011'
       MCP_SERVER_PORT: '10011'
@@ -804,7 +794,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /galaxy/slmapi/
@@ -845,7 +834,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /tranops
@@ -886,7 +874,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       SLM_API_URL: https://slm-kb.qraie.
       SLM_USERNAME: bridgeUser
@@ -1199,7 +1186,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '28077'
@@ -1237,7 +1223,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '28080'
@@ -1276,7 +1261,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '28078'
@@ -1323,7 +1307,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '28079'
@@ -1362,7 +1345,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: http://192.168.85.194:10
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '30524'
@@ -1415,7 +1397,6 @@ services:
       REDIS_PASSWORD:
         secretKey: REDIS_PASSWORD
       GLOBALAPIBASEURL: https://qraie_ai-b.qryde.n
-      ACTIVE_COLOR: ''
       START_PORT: '30166'
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PORT: '4200'
