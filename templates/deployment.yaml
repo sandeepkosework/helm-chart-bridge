@@ -67,7 +67,11 @@ spec:
 {{- if $svc.persistence }}
           volumeMounts:
 {{- range $v := $svc.persistence }}
-            - name: {{ printf "%s-%s" $name $v.name | trunc 63 | trimSuffix "-" }}
+{{- $volKey := $v.name }}
+{{- if eq $v.type "hostPath" }}
+{{- $volKey = ($v.path | replace "/" "-" | replace "." "-" | trimAll "-") }}
+{{- end }}
+            - name: {{ printf "%s-%s" $name $volKey | trunc 63 | trimSuffix "-" }}
               mountPath: {{ $v.mountPath }}
               readOnly: {{ default false $v.readOnly }}
 {{- end }}
@@ -76,7 +80,11 @@ spec:
       volumes:
 {{- $seenVolumes := dict }}
 {{- range $v := $svc.persistence }}
-{{- $volName := printf "%s-%s" $name $v.name | trunc 63 | trimSuffix "-" }}
+{{- $volKey := $v.name }}
+{{- if eq $v.type "hostPath" }}
+{{- $volKey = ($v.path | replace "/" "-" | replace "." "-" | trimAll "-") }}
+{{- end }}
+{{- $volName := printf "%s-%s" $name $volKey | trunc 63 | trimSuffix "-" }}
 {{- if not (hasKey $seenVolumes $volName) }}
 {{- $_ := set $seenVolumes $volName true }}
         - name: {{ $volName }}
