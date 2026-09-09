@@ -37,8 +37,10 @@ spec:
 {{- if $svc.ports }}
           ports:
 {{- range $p := $svc.ports }}
-            - name: {{ $p.name }}
-              containerPort: {{ $p.containerPort }}
+            - containerPort: {{ $p.containerPort }}
+{{- if $p.name }}
+              name: {{ $p.name }}
+{{- end }}
 {{- end }}
 {{- end }}
           env:

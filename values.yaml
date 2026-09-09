@@ -78,6 +78,22 @@ persistence:
     size: 10Gi
     accessModes:
     - ReadWriteOnce
+  # Dedicated PVCs for qraie-redis-shared/qraie-redis -- deliberately NOT
+  # reusing redis-data above, which already belongs to
+  # bridge-cp-conductor-redis: two separate Deployments (separate pods)
+  # both claiming the same PVC name would fight over one ReadWriteOnce
+  # volume, unlike the same PVC being mounted twice within ONE pod (which
+  # templates/deployment.yaml already dedupes safely).
+  qraie-redis-shared-data:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  qraie-redis-data:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
   erep-generated:
     enabled: true
     size: 10Gi
@@ -123,6 +139,9 @@ persistence:
     size: 10Gi
     accessModes:
     - ReadWriteOnce
+# Listing a service's name here disables it regardless of its own
+# `enabled: true` in the services[] entry above -- disabledServices always
+# wins over a service's own enabled flag, never the other way around.
 disabledServices: []
 services:
   - name: qraie-redis-shared
@@ -133,8 +152,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 6379
+    - containerPort: 6379
     # Every other service that talks to this instance sends REDIS_PASSWORD —
     # the real docker-compose enforces it via `redis-server --requirepass`,
     # which the chart never carried over (this Deployment ran with no auth
@@ -162,7 +180,11 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
-    persistence: []
+    persistence:
+    - type: pvc
+      name: qraie-redis-shared-data
+      mountPath: /data
+      readOnly: false
   - name: qraie-redis
     enabled: true
     image:
@@ -171,8 +193,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 6379
+    - containerPort: 6379
     env: {}
     ingressPath: null
     resources:
@@ -188,7 +209,11 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
-    persistence: []
+    persistence:
+    - type: pvc
+      name: qraie-redis-data
+      mountPath: /data
+      readOnly: false
   - name: bridge-cp-conductor
     enabled: true
     image:
@@ -197,8 +222,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 8461
+    - containerPort: 8461
     env:
       VIRTUAL_HOST: tg.qraie.
       VIRTUAL_PATH: /contpi/
@@ -260,8 +284,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 6379
+    - containerPort: 6379
     env: {}
     ingressPath: null
     resources:
@@ -298,8 +321,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30170
+    - containerPort: 30170
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -341,8 +363,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30172
+    - containerPort: 30172
     env:
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /controlops/api/
@@ -388,8 +409,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30174
+    - containerPort: 30174
     env:
       # erep-pod-configmap.yaml (the on-demand erep Pod spawned via the
       # Kubernetes API) ranges directly over this env map — it does not go
@@ -458,8 +478,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30176
+    - containerPort: 30176
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -507,8 +526,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 80
+    - containerPort: 80
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -548,8 +566,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30180
+    - containerPort: 30180
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -586,8 +603,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30182
+    - containerPort: 30182
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -626,8 +642,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30184
+    - containerPort: 30184
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -672,8 +687,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30188
+    - containerPort: 30188
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -715,8 +729,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 9001
+    - containerPort: 9001
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -760,8 +773,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 10011
+    - containerPort: 10011
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -796,8 +808,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30192
+    - containerPort: 30192
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -837,8 +848,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30194
+    - containerPort: 30194
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -878,8 +888,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30196
+    - containerPort: 30196
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -932,8 +941,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 3001
+    - containerPort: 3001
     env:
       NODE_ENV: production
       PORT: '3001'
@@ -974,8 +982,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 3002
+    - containerPort: 3002
     env:
       NODE_ENV: production
       PORT: '3002'
@@ -1008,8 +1015,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 3003
+    - containerPort: 3003
     env:
       NODE_ENV: production
       PORT: '3003'
@@ -1046,8 +1052,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 80
+    - containerPort: 80
     env:
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /iot-broker/admin/
@@ -1079,8 +1084,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 80
+    - containerPort: 80
     env:
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_DEST: /
@@ -1116,8 +1120,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 3040
+    - containerPort: 3040
     env:
       NODE_ENV: production
       PORT: '3040'
@@ -1149,8 +1152,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 3003
+    - containerPort: 3003
     env:
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
       VIRTUAL_PATH: /enrollment/
@@ -1191,8 +1193,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 28077
+    - containerPort: 28077
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -1229,8 +1230,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 28080
+    - containerPort: 28080
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -1268,8 +1268,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 28078
+    - containerPort: 28078
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -1315,8 +1314,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 28079
+    - containerPort: 28079
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -1354,8 +1352,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 30524
+    - containerPort: 30524
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -1407,8 +1404,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 4200
+    - containerPort: 4200
     env:
       REDIS_HOST: "{{ .Values.tenant.id }}-qraie-redis-shared"
       REDIS_PORT: '30168'
@@ -1466,8 +1462,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - name: p0
-      containerPort: 5232
+    - containerPort: 5232
     env:
       RADICALE_CONFIG: /config/config
       VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
