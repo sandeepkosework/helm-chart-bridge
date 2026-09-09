@@ -43,23 +43,43 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
+          envFrom:
+            # Every key this service's own Vault path holds (see
+            # vault_service.QRAIE_BRIDGE_SERVICE_KEYS for the schema) --
+            # bulk-imported so this template never has to enumerate
+            # individual keys per service. $svc.env above (values.yaml)
+            # still documents which keys each service expects; it's just
+            # no longer what renders each one -- envFrom pulls whatever
+            # actually landed in the secret.
+            - secretRef:
+                name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
+{{- if $.Values.commonSecrets.enabled }}
+            # Org-wide values shared by every tenant (see commonSecrets in
+            # values.yaml) -- same bulk-import mechanism, one shared secret
+            # instead of copying these into every service's own secret.
+            - secretRef:
+                name: {{ printf "%s-%s" $.Values.tenant.id $.Values.commonSecrets.secretName }}
+{{- end }}
+{{- if or (not (hasKey $svc.env "TENANT_ID")) $svc.plainEnv }}
           env:
 {{- if not (hasKey $svc.env "TENANT_ID") }}
+            # Reference example: an explicit secretKeyRef for one key,
+            # rather than pulling in the whole secret via envFrom above --
+            # the pattern to reach for if a service ever needs just one
+            # key without the rest.
             - name: TENANT_ID
               valueFrom:
                 secretKeyRef:
                   name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
                   key: TENANT_ID
 {{- end }}
-{{- range $key, $value := $svc.env }}
+{{- range $key, $value := $svc.plainEnv }}
+            # Reference example: a non-secret value sourced directly from
+            # this chart's values.yaml -- edit it here via a normal PR
+            # instead of a Vault CLI command. Only appropriate for values
+            # that genuinely aren't sensitive.
             - name: {{ $key }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
-{{- if kindIs "map" $value }}
-                  key: {{ $value.secretKey }}
-{{- else }}
-                  key: {{ $key }}
+              value: {{ $value | quote }}
 {{- end }}
 {{- end }}
           resources:

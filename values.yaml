@@ -39,17 +39,20 @@ vault:
   namespaceLabel:
     key: qraie-bridge-tenant
     value: "true"
-# Org-wide secrets shared by every tenant (e.g. third-party API keys used
-# in common). Disabled by default -- every service's env now always reads
-# from its own fixed per-service Vault path (see serviceSecrets below); no
-# per-key redirect to a shared secret exists anymore (removed along with
-# the services: map -> list conversion, since Helm can no longer deep-merge
-# a per-tenant override onto a list). Only enable this if something is
-# actually wired to read from it.
+# Org-wide secrets shared by every tenant (e.g. shared Redis/Mongo host,
+# third-party API keys used in common) -- ONE Vault path, ONE K8s Secret
+# per tenant namespace, and every service pulls it in bulk via envFrom
+# (see deployment.yaml) alongside its own per-service secret. Unlike
+# serviceSecrets below (written once per tenant at creation time), this
+# path is NOT tenant-scoped and nothing copies it -- every tenant's
+# common-secret ExternalSecret reads the exact same Vault path live, so an
+# update here reaches every tenant on its next refresh, without needing a
+# per-tenant write. Populate secret/k8s/tenant-common manually; nothing
+# writes to it automatically.
 commonSecrets:
-  enabled: false
-  secretName: common-secrets
-  remotePath: secret/common
+  enabled: true
+  secretName: common-secret
+  remotePath: secret/k8s/tenant-common
   refreshInterval: 1h
 # Secrets shared across all of one tenant's services but not shared with
 # other tenants. Disabled by default for the same reason as commonSecrets
@@ -334,8 +337,12 @@ services:
       VIRTUAL_PORT: '30170'
       VIRTUAL_PATH: /
       PORT: '30170'
-      NODE_ENV: production
       GEMINI_MODEL: gemini-3.1-pro-preview
+    # Reference example (see templates/deployment.yaml): NODE_ENV isn't
+    # actually sensitive, so it's sourced straight from this file instead
+    # of Vault -- change it here via a normal PR, no Vault CLI needed.
+    plainEnv:
+      NODE_ENV: production
     ingressPath: /
     resources:
       requests:
