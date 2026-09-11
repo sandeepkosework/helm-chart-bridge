@@ -154,7 +154,7 @@ services:
       repository: redis
       tag: '7'
       pullPolicy: IfNotPresent
-    replicas: 1
+    replicas: 2
     ports:
     - containerPort: 6379
     # Every other service that talks to this instance sends REDIS_PASSWORD —
