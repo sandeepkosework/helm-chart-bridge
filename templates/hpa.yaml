@@ -1,6 +1,7 @@
 {{- range $svc := .Values.services }}
 {{- $name := $svc.name }}
-{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.autoscaling.enabled }}
+{{- $autoscaling := default (dict) $svc.autoscaling }}
+{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") (default false $autoscaling.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -10,8 +11,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ printf "%s-%s" $.Values.tenant.id $name }}
-  minReplicas: {{ $svc.autoscaling.minReplicas }}
-  maxReplicas: {{ $svc.autoscaling.maxReplicas }}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 0
@@ -23,13 +24,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ $svc.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ $autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ $svc.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ $autoscaling.targetMemoryUtilizationPercentage }}
 ---
 {{- end }}
 {{- end }}
