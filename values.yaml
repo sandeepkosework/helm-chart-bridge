@@ -323,7 +323,9 @@ services:
       enabled: true
       minReplicas: 1
       maxReplicas: 3
-      targetCPUUtilizationPercentage: 70
+      # Temporarily lowered from 70 to 30 to make HPA easier to trigger for
+      # manual load-testing -- revert to 70 once that testing is done.
+      targetCPUUtilizationPercentage: 30
       targetMemoryUtilizationPercentage: 80
     persistence:
     - type: hostPath
