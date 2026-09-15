@@ -219,7 +219,7 @@ services:
   - name: bridge-cp-conductor
     enabled: true
     image:
-      repository: nginx
+      repository: iad.ocir.io/hbssoc/bridge-cp-conductor
       tag: 'latest'
       pullPolicy: IfNotPresent
     replicas: 1
@@ -262,8 +262,8 @@ services:
   - name: bridge-cp-conductor-redis
     enabled: true
     image:
-      repository: redis
-      tag: '7'
+      repository: iad.ocir.io/hbssoc/bridge-cp-redis
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -299,8 +299,8 @@ services:
   - name: bridge
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/acetaxi-bridge
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -333,8 +333,8 @@ services:
   - name: controlops-server
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/controlops_server
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -358,8 +358,8 @@ services:
   - name: erep-server
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/erep-server
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -400,8 +400,8 @@ services:
   - name: qraie-api-gateway
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/qraie-api-gateway-v4-stg
+      tag: 'stg-hbssv'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -437,8 +437,8 @@ services:
   - name: microservice-qraie
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/qraiebot-microservice-v4-stg
+      tag: 'stg-hbssv'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -470,8 +470,8 @@ services:
   - name: qraie-ui
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/qraie-ui-hbss-v4-stg
+      tag: 'stg-hbssv'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -495,8 +495,8 @@ services:
   - name: admin-panel
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/qraie-admin-panel
+      tag: 'bridge'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -520,8 +520,8 @@ services:
   - name: wfm-api-gateway
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/fabreq_gateway
+      tag: 'wfm-amrtr'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -545,8 +545,8 @@ services:
   - name: wfm-ui
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/wfm-ui
+      tag: 'wfm-acetaxi'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -570,8 +570,8 @@ services:
   - name: wfm-microservice
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/fabreq-microservice
+      tag: 'wfm-amrtr'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -595,8 +595,8 @@ services:
   - name: mcp-server
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/mcp_server
+      tag: 'stg-acetaxi'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -620,8 +620,8 @@ services:
   - name: mcp-client
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/mcp_client
+      tag: 'stg-acetaxi'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -645,8 +645,8 @@ services:
   - name: tranops-ui
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/tranops-ui
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -670,8 +670,8 @@ services:
   - name: tranops-backend
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/tranops-backend
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -878,8 +878,8 @@ services:
   - name: acl-server
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/acl-server
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1023,8 +1023,8 @@ services:
   - name: scheduler-agent
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/schedular-agent
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1052,8 +1052,8 @@ services:
   - name: radicale
     enabled: true
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: tomsquest/docker-radicale
+      tag: '3.3.3.0'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
