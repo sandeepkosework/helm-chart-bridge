@@ -1,5 +1,26 @@
 {{- range $name, $p := .Values.persistence }}
 {{- if $p.enabled }}
+{{- /*
+Only create this PVC if some ENABLED service actually claims it -- without
+this check every tenant gets a PVC for all ~13 entries in this map
+regardless of disabledServices, including ones belonging to services this
+tenant never runs at all (e.g. voxflow-agents-pvc for a tenant that
+disabled voxflow). At 10Gi each across a handful of always-disabled
+services, that's tens of GB of dead volumes per tenant that nothing ever
+attaches to -- exactly what filled stg-spoke-worker-01's Longhorn disk and
+blocked every subsequent tenant's own real PVCs from scheduling.
+*/}}
+{{- $used := false }}
+{{- range $svc := $.Values.services }}
+{{- if eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true" }}
+{{- range $v := $svc.persistence }}
+{{- if and (eq $v.type "pvc") (eq $v.name $name) }}
+{{- $used = true }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if $used }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -14,5 +35,6 @@ spec:
     requests:
       storage: {{ $p.size }}
 ---
+{{- end }}
 {{- end }}
 {{- end }}
