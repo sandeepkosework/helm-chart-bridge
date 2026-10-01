@@ -54,6 +54,20 @@ commonSecrets:
   secretName: common-secret
   remotePath: secret/k8s/tenant-common
   refreshInterval: 1h
+# OCIR pull credentials for the private iad.ocir.io images most services
+# above use -- ONE Vault path, same as commonSecrets, read by every tenant's
+# own SecretStore and materialized as a kubernetes.io/dockerconfigjson
+# Secret literally named `ocirPullSecret.secretName` in that tenant's
+# namespace. Referenced by every pod via imagePullSecrets (see values.yaml's
+# own `imagePullSecrets` list and templates/deployment.yaml). Populate
+# secret/k8s/ocir-pull-secret manually (key: dockerconfigjson, a full
+# ~/.docker/config.json-shaped JSON string) -- nothing writes to it
+# automatically, same as commonSecrets.
+ocirPullSecret:
+  enabled: true
+  secretName: ocir-regcred
+  remotePath: secret/k8s/ocir-pull-secret
+  refreshInterval: 1h
 # Values shared across all of THIS tenant's own services, but not with
 # other tenants (e.g. this tenant's own Redis host/password) -- unlike
 # commonSecrets above, tenant-operator DOES write here per tenant, at
