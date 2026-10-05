@@ -55,24 +55,26 @@ spec:
             - secretRef:
                 name: {{ printf "%s-%s" $.Values.tenant.id $.Values.commonSecrets.secretName }}
 {{- end }}
-{{- if $.Values.tenantSecrets.enabled }}
+{{- if $.Values.serviceCommonSecrets.enabled }}
             # 2. Shared by every service of THIS tenant, but not other
-            # tenants (see tenantSecrets in values.yaml) -- e.g. this
-            # tenant's own Redis host, written once per tenant.
+            # tenants (see serviceCommonSecrets in values.yaml) -- e.g. this
+            # tenant's own shared-Redis password, written once per tenant.
             - secretRef:
-                name: {{ printf "%s-%s" $.Values.tenant.id $.Values.tenantSecrets.secretName }}
+                name: {{ printf "%s-%s" $.Values.tenant.id $.Values.serviceCommonSecrets.secretName }}
 {{- end }}
             # 3. This service's own path (see
             # vault_service.QRAIE_BRIDGE_SERVICE_KEYS for the schema) --
             # bulk-imported so this template never has to enumerate
-            # individual keys per service. $svc.env above (values.yaml)
-            # still documents which keys each service expects; it's just
-            # no longer what renders each one -- envFrom pulls whatever
-            # actually landed in the secret. Most specific, so it wins
-            # over both layers above for any key they share.
+            # individual keys per service. Most specific of the three
+            # envFrom layers, so it wins over both above for any key they
+            # share -- but $svc.env below (rendered as real env[] entries,
+            # not just documentation) wins over this too, per Kubernetes'
+            # own env[]-over-envFrom precedence.
             - secretRef:
                 name: {{ printf "%s-%s-secret" $.Values.tenant.id $name }}
-{{- if or (not (hasKey $svc.env "TENANT_ID")) $svc.plainEnv }}
+{{- $usesSharedRedis := has $name $.Values.redisSharedServices }}
+{{- $ownRedisTarget := get $.Values.redisOwnServices $name }}
+{{- if or (not (hasKey $svc.env "TENANT_ID")) $svc.env $svc.plainEnv $usesSharedRedis $ownRedisTarget }}
           env:
 {{- if not (hasKey $svc.env "TENANT_ID") }}
             # Reference example: an explicit secretKeyRef for one key,
@@ -92,6 +94,37 @@ spec:
             # that genuinely aren't sensitive.
             - name: {{ $key }}
               value: {{ $value | quote }}
+{{- end }}
+{{- range $key, $value := $svc.env }}
+            # Explicit override from this service's own `env:` block in
+            # values.yaml -- rendered LAST, so it wins over plainEnv above
+            # too if they ever define the same key (Kubernetes resolves
+            # duplicate env[] names by last-one-wins), in addition to
+            # already winning over anything envFrom pulled in from Vault.
+            # Whatever is set here always reaches the container.
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+{{- end }}
+{{- if $usesSharedRedis }}
+            # Computed directly, not sourced from Vault -- fully
+            # deterministic from this tenant's own slug, same naming
+            # qraie-redis-shared's own Service object uses (see
+            # tenant-app.slug + service.yaml). REDIS_PASSWORD still comes
+            # from serviceCommonSecrets via envFrom above.
+            - name: REDIS_HOST
+              value: {{ printf "%s-qraie-redis-shared" (include "tenant-app.slug" $) | quote }}
+            - name: REDIS_PORT
+              value: "6379"
+{{- end }}
+{{- if $ownRedisTarget }}
+            # This service talks to its own dedicated Redis sibling, not
+            # the shared qraie-redis-shared instance (see
+            # redisOwnServices in values.yaml) -- also computed directly,
+            # same reasoning as $usesSharedRedis above.
+            - name: REDIS_HOST
+              value: {{ printf "%s-%s" (include "tenant-app.slug" $) $ownRedisTarget | quote }}
+            - name: REDIS_PORT
+              value: "6379"
 {{- end }}
 {{- end }}
           resources:

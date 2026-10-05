@@ -69,15 +69,61 @@ ocirPullSecret:
   remotePath: secret/k8s/ocir-pull-secret
   refreshInterval: 1h
 # Values shared across all of THIS tenant's own services, but not with
-# other tenants (e.g. this tenant's own Redis host/password) -- unlike
+# other tenants -- e.g. this tenant's own shared Redis password (the one
+# qraie-redis-shared itself enforces via --requirepass). Unlike
 # commonSecrets above, tenant-operator DOES write here per tenant, at
-# secret/tenants/<tenant.id>/common (see write_initial_qraie_bridge_tenant_secrets's
-# "common" entry), same timing as every other per-service secret.
-tenantSecrets:
+# secret/tenants/<tenant.id>/service-common (see
+# write_initial_qraie_bridge_tenant_secrets's "service-common" entry), same
+# timing as every other per-service secret. REDIS_HOST/REDIS_PORT used to
+# live here too, but are now computed directly below (see
+# redisSharedServices/redisOwnServices) -- they're fully deterministic from
+# this tenant's own slug, so there was never a real secret there.
+serviceCommonSecrets:
   enabled: true
-  secretName: tenant-secret
+  secretName: service-common-secret
   remotePath: ""
   refreshInterval: 1h
+# Services that talk to the ONE shared qraie-redis-shared instance -- get
+# REDIS_HOST/REDIS_PORT computed directly in deployment.yaml from this
+# tenant's own slug (same naming qraie-redis-shared's own Service object
+# uses), instead of round-tripping through Vault. A single top-level list,
+# not a per-service field -- same reasoning as disabledServices below: Helm
+# replaces a whole list/map on override rather than deep-merging individual
+# service entries, so a per-service flag would get silently dropped by a
+# partial values override. Services not listed here and not in
+# redisOwnServices below get no REDIS_HOST/REDIS_PORT env at all (they
+# don't talk to Redis) -- see the real docker-compose.yml reference this
+# chart was ported from for which services actually use Redis.
+redisSharedServices:
+  - acl-server
+  - admin-panel
+  - bridge
+  - controlops-server
+  - erep-server
+  - mcp-client
+  - mcp-server
+  - microservice-qraie
+  - prism-backend
+  - prism-scanner
+  - prism-ui
+  - qraie-api-gateway
+  - qraie-ui
+  - scheduler-agent
+  - tranops-backend
+  - tranops-ui
+  - voxflow
+  - wfm-api-gateway
+  - wfm-microservice
+  - wfm-ui
+# Services that talk to their OWN dedicated Redis sibling instead of the
+# shared qraie-redis-shared instance. Key = the service name, value = the
+# name of its own Redis sibling (must also be a real, enabled entry in
+# .Values.services below). bridge-cp-conductor's own Redis doesn't enforce
+# a password in the real docker-compose reference, unlike qraie-redis-shared
+# -- REDIS_PASSWORD for these stays in that service's own per-service
+# secret (serviceSecrets below), not here.
+redisOwnServices:
+  bridge-cp-conductor: bridge-cp-conductor-redis
 # Secrets scoped to a single service of a single tenant. Generated
 # automatically for any service whose env has secret-ref (map) values, from
 # Vault path secret/tenants/<tenant.id>/<service> — this is the default an
