@@ -161,6 +161,20 @@ persistence:
 # `enabled: true` in the services[] entry above -- disabledServices always
 # wins over a service's own enabled flag, never the other way around.
 disabledServices: []
+# Per-tenant resource overrides, set from a tenant's own values file so the
+# chart itself never needs editing. Merged field by field on top of each
+# service's own `resources:` below -- set only `requests` and the service's
+# limits are kept. Precedence, lowest to highest: service's own resources,
+# resourceDefaults (every service), serviceResources.<name> (one service).
+# Quote the values ('1m', '0'); an unquoted 0 is dropped by the merge.
+# Example:
+#   resourceDefaults:
+#     requests: {cpu: 1m, memory: 1Mi}
+#   serviceResources:
+#     erep-server:
+#       requests: {cpu: 100m, memory: 256Mi}
+resourceDefaults: {}
+serviceResources: {}
 services:
   - name: qraie-redis-shared
     enabled: true

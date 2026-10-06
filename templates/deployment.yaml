@@ -94,8 +94,14 @@ spec:
               value: {{ $value | quote }}
 {{- end }}
 {{- end }}
+{{- /* Per-tenant resource overrides, field by field: the service's own
+       resources, then .Values.resourceDefaults (all services), then
+       .Values.serviceResources.<name> (one service). */}}
+{{- $res := deepCopy (default (dict) $svc.resources) }}
+{{- $res = mergeOverwrite $res (deepCopy (default (dict) $.Values.resourceDefaults)) }}
+{{- $res = mergeOverwrite $res (deepCopy (default (dict) (get (default (dict) $.Values.serviceResources) $name))) }}
           resources:
-{{ toYaml $svc.resources | indent 12 }}
+{{ toYaml $res | indent 12 }}
 {{- if $svc.persistence }}
           volumeMounts:
 {{- range $v := $svc.persistence }}
