@@ -249,7 +249,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -334,7 +334,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -363,7 +363,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -388,7 +388,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -430,7 +430,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -467,7 +467,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -500,7 +500,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -525,7 +525,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -550,7 +550,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -575,7 +575,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -600,7 +600,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -625,7 +625,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -650,7 +650,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -675,7 +675,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -700,7 +700,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -725,7 +725,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -750,7 +750,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -775,7 +775,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -800,7 +800,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -825,7 +825,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -850,7 +850,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -875,7 +875,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -908,7 +908,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -933,7 +933,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -958,7 +958,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -991,7 +991,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -1016,7 +1016,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -1053,7 +1053,7 @@ services:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
