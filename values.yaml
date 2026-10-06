@@ -185,7 +185,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -214,7 +214,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -243,7 +243,7 @@ services:
     ingressPath: /controlopsv2/api/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -286,7 +286,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -328,7 +328,7 @@ services:
     ingressPath: /
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -357,7 +357,7 @@ services:
     ingressPath: /controlops/api/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -382,7 +382,7 @@ services:
     ingressPath: /galaxy/erepapi/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -424,7 +424,7 @@ services:
     ingressPath: /workplace/api/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -461,7 +461,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -494,7 +494,7 @@ services:
     ingressPath: /workplace/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -519,7 +519,7 @@ services:
     ingressPath: /workplace/admin-portal/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -544,7 +544,7 @@ services:
     ingressPath: /organization/wfm/api/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -569,7 +569,7 @@ services:
     ingressPath: /organization/wfm/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -594,7 +594,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -619,7 +619,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -644,7 +644,7 @@ services:
     ingressPath: /galaxy/slmapi/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -669,7 +669,7 @@ services:
     ingressPath: /tranops
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -694,7 +694,7 @@ services:
     ingressPath: /tranops/api
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -719,7 +719,7 @@ services:
     ingressPath: /iot-broker/api/data/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -744,7 +744,7 @@ services:
     ingressPath: /iot-broker/api/config/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -769,7 +769,7 @@ services:
     ingressPath: /iot-broker/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -794,7 +794,7 @@ services:
     ingressPath: /iot-broker/admin/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -819,7 +819,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -844,7 +844,7 @@ services:
     ingressPath: /vision
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -869,7 +869,7 @@ services:
     ingressPath: /enrollment/
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -902,7 +902,7 @@ services:
     ingressPath: /acl_server/api
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -927,7 +927,7 @@ services:
     ingressPath: /prism-ui
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -952,7 +952,7 @@ services:
     ingressPath: /prism/api
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -985,7 +985,7 @@ services:
     ingressPath: /prism-scanner
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -1010,7 +1010,7 @@ services:
     ingressPath: /voxflow
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -1047,7 +1047,7 @@ services:
     ingressPath: /scheduler-agent/api
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
@@ -1076,7 +1076,7 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 5m
+        cpu: 1m
         memory: 32Mi
       limits:
         cpu: 250m
