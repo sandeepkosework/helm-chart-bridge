@@ -186,7 +186,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -215,7 +215,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -244,7 +244,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -287,7 +287,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -329,7 +329,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -358,7 +358,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -383,7 +383,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -425,7 +425,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -462,7 +462,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -495,7 +495,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -520,7 +520,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -545,7 +545,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -570,7 +570,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -595,7 +595,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -620,7 +620,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -645,7 +645,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -670,7 +670,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -695,7 +695,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -720,7 +720,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -745,7 +745,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -770,7 +770,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -795,7 +795,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -820,7 +820,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -845,7 +845,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -870,7 +870,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -903,7 +903,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -928,7 +928,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -953,7 +953,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -986,7 +986,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -1011,7 +1011,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -1048,7 +1048,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -1077,7 +1077,7 @@ services:
     resources:
       requests:
         cpu: 1m
-        memory: 32Mi
+        memory: 1Mi
       limits:
         cpu: '1'
         memory: 1Gi
