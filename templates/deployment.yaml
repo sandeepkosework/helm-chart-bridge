@@ -48,12 +48,12 @@ spec:
             # Three layers, least to most specific -- Kubernetes applies
             # envFrom entries in order and a later one wins on a key both
             # define (see the secrets section of values.yaml).
-{{- if $.Values.tenantcommonSecrets.enabled }}
+{{- if eq (include "tenant-app.sharedSecretEnabled" (dict "root" $ "svc" $svc "layer" "tenantCommon")) "true" }}
             # 1. Org-wide, same for every tenant, added to every service.
             - secretRef:
                 name: {{ printf "%s-%s" $.Values.tenant.id $.Values.tenantcommonSecrets.secretName }}
 {{- end }}
-{{- if $.Values.servicecommonSecrets.enabled }}
+{{- if eq (include "tenant-app.sharedSecretEnabled" (dict "root" $ "svc" $svc "layer" "serviceCommon")) "true" }}
             # 2. This tenant's, shared by all its services, added to every service.
             - secretRef:
                 name: {{ printf "%s-%s" $.Values.tenant.id $.Values.servicecommonSecrets.secretName }}
@@ -63,7 +63,7 @@ spec:
             - secretRef:
                 name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" $name) }}
 {{- end }}
-{{- if or (and $ownSecret (not (hasKey $svc.env "TENANT_ID"))) $svc.plainEnv }}
+{{- if or (and $ownSecret (not (hasKey $svc.env "TENANT_ID"))) $svc.plainEnv $svc.serviceRefEnv }}
           env:
 {{- if and $ownSecret (not (hasKey $svc.env "TENANT_ID")) }}
             # Reference example: an explicit secretKeyRef for one key,
@@ -74,11 +74,28 @@ spec:
                   name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" $name) }}
                   key: TENANT_ID
 {{- end }}
+{{- range $key, $ref := $svc.serviceRefEnv }}
+{{- $target := dict }}
+{{- range $.Values.services }}{{- if eq .name $ref.service }}{{- $target = . }}{{- end }}{{- end }}
+{{- if not $target }}{{- fail (printf "service %q: serviceRefEnv.%s refers to unknown service %q" $name $key $ref.service) }}{{- end }}
+{{- if ne (include "tenant-app.serviceEnabled" (dict "svc" $target "disabledServices" $.Values.disabledServices)) "true" }}{{- fail (printf "service %q: serviceRefEnv.%s refers to disabled service %q" $name $key $ref.service) }}{{- end }}
+            # Looked up from the other service in this chart, not from Vault:
+            # its in-cluster Service name / first port. Set in `env`, which
+            # takes precedence over the envFrom secrets above.
+            - name: {{ $key }}
+              value: {{ if eq $ref.field "host" }}{{ printf "%s-%s" (include "tenant-app.slug" $) $target.name | quote }}{{ else if eq $ref.field "port" }}{{ (index $target.ports 0).containerPort | toString | quote }}{{ else }}{{ fail (printf "service %q: serviceRefEnv.%s field must be host or port" $name $key) }}{{ end }}
+{{- end }}
 {{- range $key, $value := $svc.plainEnv }}
             # Reference example: a non-secret value sourced directly from
             # this chart's values.yaml. Only for values that aren't sensitive.
             - name: {{ $key }}
               value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- range $probeKey := list "startupProbe" "readinessProbe" "livenessProbe" }}
+{{- with get (default (dict) $svc.probes) $probeKey }}
+          {{ $probeKey }}:
+{{ toYaml . | indent 12 }}
 {{- end }}
 {{- end }}
           resources:
