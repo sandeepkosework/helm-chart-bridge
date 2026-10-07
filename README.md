@@ -73,16 +73,22 @@ automatically, so `remotePath` is normally left empty. To override it, set
 `remotePath`; it may contain the placeholders `<tenant_id>` and
 `<service-name>`.
 
-Layer 3 creates one ExternalSecret per enabled service. A service that has
-no secrets of its own can opt out, so no Vault path is needed for it (it
-still gets layers 1 and 2):
+Each layer can be turned off per service in its `services[]` entry. Every
+service in `values.yaml` lists all three flags, each `true` unless changed:
 
 ```yaml
 services:
-  - name: qraie-redis
+  - name: qraie-ui
     secrets:
-      enabled: false
+      tenantCommon: true     # layer 1
+      serviceCommon: false   # layer 2: skip for this service
+      service: false         # layer 3: no own secret, no Vault path needed
 ```
+
+A layer reaches a service only if it is on both globally (the layer's
+`enabled` in the top-level block) and in the service's own `secrets:`; an
+omitted flag counts as `true`. Layer 3 creates one ExternalSecret per
+service that has it on.
 
 A Vault path that is missing for an enabled service leaves its ExternalSecret
 in error, the Secret is never created, and the pod stays in
@@ -139,6 +145,49 @@ rarely scales back down, and utilization is measured against the small
 default memory request (`128Mi`). With `enabled: true`, at least one target
 must be set or the render fails. Targets are a percentage of the container's
 resource *request*, and scaling needs metrics-server in the cluster.
+
+## Env vars looked up from another service
+
+A service can take an env var's value from another service in this chart
+instead of from Vault, with `serviceRefEnv` in its `services[]` entry.
+`bridge-cp-conductor` uses it to find its own Redis:
+
+```yaml
+serviceRefEnv:
+  REDIS_HOST:
+    service: bridge-cp-conductor-redis   # a services[].name
+    field: host                          # host = in-cluster Service name
+  REDIS_PORT:
+    service: bridge-cp-conductor-redis
+    field: port                          # port = that service's first containerPort
+```
+
+It renders as plain `env:` entries, which take precedence over the `envFrom`
+secrets, so it overrides any `REDIS_HOST`/`REDIS_PORT` from Vault for that
+service only. The host is the short Service name (`<tenant.id>-<service>`,
+with a `t-` prefix for digit-leading tenant IDs), which resolves inside the
+tenant namespace. The render fails if the referenced service doesn't exist or
+is in `disabledServices`.
+
+## Health checks
+
+A service can declare `probes:` in its `services[]` entry, with raw Kubernetes
+probe specs under `startupProbe`, `readinessProbe` and/or `livenessProbe`;
+nothing is rendered for a service without it. The ones defined are taken from
+the docker-compose `healthcheck` of the same app and are readiness (and
+startup) only, so a failing check stops traffic to the pod without restarting
+it:
+
+| Service | Check |
+|---|---|
+| `qraie-redis-shared` | exec `redis-cli ping` (with `REDIS_PASSWORD`) |
+| `bridge-cp-conductor-redis` | exec `redis-cli -p 6379 ping`, startup + readiness |
+| `mcp-server` | HTTP `GET /health` on 10011, startup + readiness |
+| `enrollment-api` | HTTP `GET /` on 3003 (must match the app's real port) |
+
+compose's `depends_on: condition: service_healthy` (mcp-client waiting for
+mcp-server) has no equivalent here; readiness only keeps traffic away from a
+pod that isn't ready yet.
 
 ## Releasing a change
 

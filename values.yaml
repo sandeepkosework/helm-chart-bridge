@@ -1,3 +1,5 @@
+
+
 nameOverride: tenant-app
 # Placeholders — every real deployment MUST override tenant.* via a
 # per-tenant values file (see examples/). Left unset-looking on purpose so
@@ -74,10 +76,16 @@ servicecommonSecrets:
   refreshInterval: 1h
 # 3. Secrets scoped to a single service of a single tenant: one K8s Secret
 # per enabled service (<tenant.id>-<service-name>-<secretName>), injected
-# into that service ONLY. A service with no secrets of its own opts out
-# individually with `secrets: {enabled: false}` in its services[] entry (no
-# ExternalSecret, no envFrom entry, no Vault path needed); it still gets
-# layers 1 and 2. Services without that block follow `enabled` below.
+# into that service ONLY.
+#
+# Per service, each layer can be turned off in its services[] entry:
+#   secrets:
+#     tenantCommon: false    # skip layer 1 for this service
+#     serviceCommon: false   # skip layer 2 for this service
+#     service: false         # skip layer 3: no ExternalSecret, no Vault path
+# A layer is delivered to a service only if it is on BOTH here (the global
+# `enabled` of that layer) and in the service's own `secrets:`. An omitted
+# flag counts as true.
 serviceSecrets:
   enabled: true
   secretName: service-secret
@@ -103,6 +111,16 @@ persistence:
     size: 10Gi
     accessModes:
     - ReadWriteOnce
+  bridge-cp-redis-dispatcher:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce
+  bridge-cp-redis-data:
+    enabled: true
+    size: 10Gi
+    accessModes:
+    - ReadWriteOnce        
   redis-data:
     enabled: true
     size: 10Gi
@@ -224,6 +242,12 @@ autoscaling:
 services:
   - name: qraie-redis-shared
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: redis
       tag: '7'
@@ -242,11 +266,25 @@ services:
     - --requirepass
     - $(REDIS_PASSWORD)
     env: {}
+    # Health checks translated from the docker-compose healthcheck of the same
+    # app. Optional `probes:` takes raw Kubernetes probe specs under
+    # startupProbe / readinessProbe / livenessProbe. Readiness (and startup)
+    # only: a failing check stops traffic to the pod but does not restart it.
+    probes:
+      readinessProbe:
+        exec:
+          command:
+          - sh
+          - -c
+          - redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 5
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -262,11 +300,12 @@ services:
       readOnly: false
   - name: qraie-redis
     enabled: true
-    # Example of the per-service opt-out: no ExternalSecret and no envFrom
-    # entry for this service's own layer-3 secret (it still gets the
-    # tenant-common and service-common layers). Remove to use the default.
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
     secrets:
-      enabled: false
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: false       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: redislabs/redisgears
       tag: 1.2.5
@@ -278,8 +317,8 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -293,8 +332,16 @@ services:
       name: qraie-redis-data
       mountPath: /data
       readOnly: false
+
+
   - name: bridge-cp-conductor
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/bridge-cp-conductor
       tag: 'latest'
@@ -303,28 +350,45 @@ services:
     ports:
     - containerPort: 8461
     env: {}
+    # Env vars whose value is looked up from ANOTHER service in this chart
+    # (its in-cluster Service name for `host`, its first container port for
+    # `port`) -- no Vault entry needed. Rendered under `env:`, which wins
+    # over the envFrom secrets, so this overrides any REDIS_HOST/REDIS_PORT
+    # coming from service-common. The referenced service must exist and be
+    # enabled, otherwise the render fails.
+    serviceRefEnv:
+      REDIS_HOST:
+        service: bridge-cp-conductor-redis
+        field: host
+      REDIS_PORT:
+        service: bridge-cp-conductor-redis
+        field: port
     ingressPath: /controlopsv2/api/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence:
-    - type: hostPath
-      path: /opt/bridge-cp-redis/dispatcher
+    - type: pvc
+      name: bridge-cp-redis-dispatcher
       mountPath: /opt/bridge-cp-redis/dispatcher
       readOnly: false
     - type: pvc
       name: bridge-cp-wtl-sr-instances
       mountPath: /opt/bridge-cp-wtl/sr-instances
       readOnly: false
+    - type: pvc
+      name: bridge-cp-redis-data
+      mountPath: /data
+      readOnly: false      
     # /var/run/docker.sock hostPath mount removed here — grants de-facto
     # root on the node with no safe Kubernetes analog. Unlike erep-server,
     # bridge-cp-conductor has no on-demand Kubernetes-API replacement wired
@@ -337,6 +401,12 @@ services:
       readOnly: true
   - name: bridge-cp-conductor-redis
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/bridge-cp-redis
       tag: 'stg'
@@ -345,11 +415,27 @@ services:
     ports:
     - containerPort: 6379
     env: {}
+    # Health checks translated from the docker-compose healthcheck of the same
+    # app. Optional `probes:` takes raw Kubernetes probe specs under
+    # startupProbe / readinessProbe / livenessProbe. Readiness (and startup)
+    # only: a failing check stops traffic to the pod but does not restart it.
+    probes:
+      startupProbe:        # compose start_period: 15s
+        exec:
+          command: [redis-cli, -p, "6379", ping]
+        periodSeconds: 5
+        failureThreshold: 3
+      readinessProbe:
+        exec:
+          command: [redis-cli, -p, "6379", ping]
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 5
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
@@ -364,15 +450,21 @@ services:
       mountPath: /opt/bridge-cp-wtl/sr-instances
       readOnly: false
     - type: pvc
-      name: redis-data
+      name: bridge-cp-redis-data
       mountPath: /data
       readOnly: false
-    - type: hostPath
-      path: /opt/bridge-cp-redis/dispatcher
+    - type: pvc
+      name: bridge-cp-redis-dispatcher
       mountPath: /opt/bridge-cp-redis/dispatcher
       readOnly: false
   - name: bridge
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/acetaxi-bridge
       tag: 'stg'
@@ -389,13 +481,13 @@ services:
     ingressPath: /
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -406,6 +498,12 @@ services:
       readOnly: true
   - name: controlops-server
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/controlops_server
       tag: 'stg'
@@ -417,19 +515,25 @@ services:
     ingressPath: /controlops/api/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: erep-server
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/erep-server
       tag: 'stg'
@@ -441,13 +545,13 @@ services:
     ingressPath: /galaxy/erepapi/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -471,6 +575,12 @@ services:
       readOnly: true
   - name: qraie-api-gateway
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/qraie-api-gateway-v4-stg
       tag: 'stg-hbssv'
@@ -482,13 +592,13 @@ services:
     ingressPath: /workplace/api/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -507,6 +617,12 @@ services:
       readOnly: false
   - name: microservice-qraie
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/qraiebot-microservice-v4-stg
       tag: 'stg-hbssv'
@@ -518,13 +634,13 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -539,6 +655,12 @@ services:
       readOnly: false
   - name: qraie-ui
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/qraie-ui-hbss-v4-stg
       tag: 'stg-hbssv'
@@ -550,19 +672,25 @@ services:
     ingressPath: /workplace/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: admin-panel
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/qraie-admin-panel
       tag: 'bridge'
@@ -574,19 +702,25 @@ services:
     ingressPath: /workplace/admin-portal/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: wfm-api-gateway
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/fabreq_gateway
       tag: 'wfm-amrtr'
@@ -598,19 +732,25 @@ services:
     ingressPath: /organization/wfm/api/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: wfm-ui
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/wfm-ui
       tag: 'wfm-acetaxi'
@@ -622,19 +762,25 @@ services:
     ingressPath: /organization/wfm/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: wfm-microservice
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/fabreq-microservice
       tag: 'wfm-amrtr'
@@ -646,19 +792,25 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: mcp-server
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/mcp_server
       tag: 'stg-acetaxi'
@@ -667,22 +819,46 @@ services:
     ports:
     - containerPort: 10011
     env: {}
+    # Health checks translated from the docker-compose healthcheck of the same
+    # app. Optional `probes:` takes raw Kubernetes probe specs under
+    # startupProbe / readinessProbe / livenessProbe. Readiness (and startup)
+    # only: a failing check stops traffic to the pod but does not restart it.
+    probes:
+      startupProbe:        # compose start_period: 30s
+        httpGet:
+          path: /health
+          port: 10011
+        periodSeconds: 5
+        failureThreshold: 6
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 10011
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 5
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: mcp-client
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/mcp_client
       tag: 'stg-acetaxi'
@@ -694,19 +870,25 @@ services:
     ingressPath: /galaxy/slmapi/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: tranops-ui
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/tranops-ui
       tag: 'stg'
@@ -718,19 +900,25 @@ services:
     ingressPath: /tranops
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: tranops-backend
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/tranops-backend
       tag: 'stg'
@@ -742,19 +930,25 @@ services:
     ingressPath: /tranops/api
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: iot-broker-data
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -766,19 +960,25 @@ services:
     ingressPath: /iot-broker/api/data/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: iot-broker-config
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -790,19 +990,25 @@ services:
     ingressPath: /iot-broker/api/config/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: iot-broker-broker
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -814,19 +1020,25 @@ services:
     ingressPath: /iot-broker/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: iot-broker-admin
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -838,19 +1050,25 @@ services:
     ingressPath: /iot-broker/admin/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: iot-broker-web
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -862,19 +1080,25 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: iot-broker-loconav-vision
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -886,19 +1110,25 @@ services:
     ingressPath: /vision
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: enrollment-api
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -907,16 +1137,30 @@ services:
     ports:
     - containerPort: 3003
     env: {}
+    # Health checks translated from the docker-compose healthcheck of the same
+    # app. Optional `probes:` takes raw Kubernetes probe specs under
+    # startupProbe / readinessProbe / livenessProbe. Readiness (and startup)
+    # only: a failing check stops traffic to the pod but does not restart it.
+    # `port` must be the port the app really listens on (its PORT env, 28055
+    # in compose); this chart's containerPort for it is 3003.
+    probes:
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 3003
+        periodSeconds: 30
+        timeoutSeconds: 10
+        failureThreshold: 3
     ingressPath: /enrollment/
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -931,6 +1175,12 @@ services:
       readOnly: false
   - name: acl-server
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/acl-server
       tag: 'stg'
@@ -942,19 +1192,25 @@ services:
     ingressPath: /acl_server/api
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: prism-ui
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -966,19 +1222,25 @@ services:
     ingressPath: /prism-ui
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: prism-backend
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -990,13 +1252,13 @@ services:
     ingressPath: /prism/api
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -1011,6 +1273,12 @@ services:
       readOnly: false
   - name: prism-scanner
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -1022,19 +1290,25 @@ services:
     ingressPath: /prism-scanner
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: voxflow
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: nginx
       tag: 'latest'
@@ -1046,13 +1320,13 @@ services:
     ingressPath: /voxflow
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -1071,6 +1345,12 @@ services:
       readOnly: true
   - name: scheduler-agent
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/schedular-agent
       tag: 'stg'
@@ -1082,13 +1362,13 @@ services:
     ingressPath: /scheduler-agent/api
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi
     autoscaling:
-      enabled: false
+      enabled: true
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
@@ -1099,6 +1379,12 @@ services:
       readOnly: true
   - name: radicale
     enabled: true
+    # Which secret layers this service receives via envFrom (see the
+    # secrets section at the top). Each is on unless set to false here.
+    secrets:
+      tenantCommon: true    # layer 1 (tenantcommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
+      service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: tomsquest/docker-radicale
       tag: '3.3.3.0'
@@ -1110,8 +1396,8 @@ services:
     ingressPath: null
     resources:
       requests:
-        cpu: 1m
-        memory: 1Mi
+        cpu: 250m
+        memory: 128Mi
       limits:
         cpu: '1'
         memory: 1Gi

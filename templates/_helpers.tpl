@@ -64,9 +64,20 @@ top-level context, for tenant.id) and optionally "service".
 Whether a service gets its own layer-3 secret (ExternalSecret + envFrom
 entry). Takes a dict with "root" and "svc". True when the global
 serviceSecrets.enabled is on, unless the service opts out with
-`secrets: {enabled: false}` in its own services[] entry.
+`secrets: {service: false}` in its own services[] entry.
 */ -}}
 {{- define "tenant-app.serviceSecretEnabled" -}}
 {{- $s := default (dict) .svc.secrets -}}
-{{- if and .root.Values.serviceSecrets.enabled (ne (toString (get $s "enabled")) "false") -}}true{{- else -}}false{{- end -}}
+{{- if and .root.Values.serviceSecrets.enabled (ne (toString (get $s "service")) "false") -}}true{{- else -}}false{{- end -}}
+{{- end }}
+{{- /*
+Whether a service gets one of the shared secret layers. Takes "root", "svc"
+and "layer" (the services[].secrets key: "tenantCommon" or "serviceCommon").
+True when that layer's global `<layer>Secrets.enabled` is on, unless the
+service opts out with `secrets: {<layer>: false}` in its own services[] entry.
+*/ -}}
+{{- define "tenant-app.sharedSecretEnabled" -}}
+{{- $s := default (dict) .svc.secrets -}}
+{{- $global := ternary .root.Values.tenantcommonSecrets.enabled .root.Values.servicecommonSecrets.enabled (eq .layer "tenantCommon") -}}
+{{- if and $global (ne (toString (get $s .layer)) "false") -}}true{{- else -}}false{{- end -}}
 {{- end }}
