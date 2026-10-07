@@ -39,20 +39,49 @@ vault:
   namespaceLabel:
     key: qraie-bridge-tenant
     value: "true"
-# Org-wide secrets shared by every tenant (e.g. shared Redis/Mongo host,
+# Three layers of Vault-backed secrets. Every layer is an ExternalSecret
+# (templates/externalsecret.yaml) read through this tenant's own SecretStore
+# and pulled into pods via envFrom (templates/deployment.yaml), least to
+# most specific -- a later layer wins on a key an earlier one also defines:
+#   1. tenantcommonSecrets   -- org-wide, same for every tenant
+#   2. servicecommonSecrets  -- this tenant's, shared by all its services
+#   3. serviceSecrets        -- this tenant's, one per service
+# Layers 2 and 3 derive their Vault path from tenant.id automatically, so
+# leave remotePath empty: layer 2 reads secret/k8s/<tenant.id>/service-common
+# and layer 3 reads secret/k8s/<tenant.id>/<service-name>. Set remotePath
+# only to override; it may then use the placeholders <tenant_id> and
+# <service-name>, substituted at render time.
+#
+# 1. Org-wide secrets shared by every tenant (e.g. shared Redis/Mongo host,
 # third-party API keys used in common) -- ONE Vault path, ONE K8s Secret
-# per tenant namespace, and every service pulls it in bulk via envFrom
-# (see deployment.yaml) alongside its own per-service secret. Unlike
-# serviceSecrets below (written once per tenant at creation time), this
-# path is NOT tenant-scoped and nothing copies it -- every tenant's
-# common-secret ExternalSecret reads the exact same Vault path live, so an
-# update here reaches every tenant on its next refresh, without needing a
-# per-tenant write. Populate secret/k8s/tenant-common manually; nothing
-# writes to it automatically.
-commonSecrets:
+# per tenant namespace, injected into EVERY enabled service automatically.
+# NOT tenant-scoped and nothing copies it -- every tenant's ExternalSecret
+# reads the exact same Vault path live, so an update here reaches every
+# tenant on its next refresh. Populate secret/k8s/tenant-common manually;
+# nothing writes to it automatically.
+tenantcommonSecrets:
   enabled: true
-  secretName: common-secret
+  secretName: tenant-common-secret
   remotePath: secret/k8s/tenant-common
+  refreshInterval: 1h
+# 2. Values shared across all of THIS tenant's own services, but not with
+# other tenants (e.g. this tenant's own Redis host/password). One K8s
+# Secret per tenant, injected into EVERY enabled service automatically.
+servicecommonSecrets:
+  enabled: true
+  secretName: service-common-secret
+  remotePath: ""   # default: secret/k8s/<tenant.id>/service-common
+  refreshInterval: 1h
+# 3. Secrets scoped to a single service of a single tenant: one K8s Secret
+# per enabled service (<tenant.id>-<service-name>-<secretName>), injected
+# into that service ONLY. A service with no secrets of its own opts out
+# individually with `secrets: {enabled: false}` in its services[] entry (no
+# ExternalSecret, no envFrom entry, no Vault path needed); it still gets
+# layers 1 and 2. Services without that block follow `enabled` below.
+serviceSecrets:
+  enabled: true
+  secretName: service-secret
+  remotePath: ""   # default: secret/k8s/<tenant.id>/<service-name>
   refreshInterval: 1h
 # OCIR pull credentials for the private iad.ocir.io images most services
 # above use -- ONE Vault path, same as commonSecrets, read by every tenant's
@@ -67,23 +96,6 @@ ocirPullSecret:
   enabled: true
   secretName: ocir-regcred
   remotePath: secret/k8s/ocir-pull-secret
-  refreshInterval: 1h
-# Values shared across all of THIS tenant's own services, but not with
-# other tenants (e.g. this tenant's own Redis host/password) -- unlike
-# commonSecrets above, tenant-operator DOES write here per tenant, at
-# secret/tenants/<tenant.id>/common (see write_initial_qraie_bridge_tenant_secrets's
-# "common" entry), same timing as every other per-service secret.
-tenantSecrets:
-  enabled: true
-  secretName: tenant-secret
-  remotePath: ""
-  refreshInterval: 1h
-# Secrets scoped to a single service of a single tenant. Generated
-# automatically for any service whose env has secret-ref (map) values, from
-# Vault path secret/tenants/<tenant.id>/<service> — this is the default an
-# env var falls back to when it omits `secretName` entirely.
-serviceSecrets:
-  enabled: true
   refreshInterval: 1h
 persistence:
   bridge-cp-wtl-sr-instances:
@@ -161,6 +173,54 @@ persistence:
 # `enabled: true` in the services[] entry above -- disabledServices always
 # wins over a service's own enabled flag, never the other way around.
 disabledServices: []
+# Per-service image tag overrides, keyed by services[].name -- e.g.
+#   imageTags:
+#     bridge: v1.4.2
+#     qraie-ui: stg-hbssv-20261007
+#
+# Precedence (highest wins):
+#   1. imageTags.<service-name>   -- if set and non-empty, this tag is used
+#   2. services[].image.tag       -- the service's own default below
+# So `image.tag` in services[] is only a default; an imageTags entry always
+# overrides it. An empty ("") or null entry counts as unset and falls back
+# to the default. Only the tag can be overridden -- image.repository always
+# comes from services[].
+#
+# This is a map (not a services[] edit) so a tenant values file can pin one
+# service's tag without Helm replacing the whole services list. The erep
+# Pod template (templates/erep-pod-configmap.yaml) follows erep-server's
+# effective tag too.
+imageTags: {}
+# Global autoscaling master switch. It is checked FIRST; a service's own
+# `autoscaling.enabled` (in services[] below) is only looked at if this is on.
+#
+#   enabled: true   (default)  The global switch is "on" and steps aside:
+#                              each service's own autoscaling.enabled decides.
+#                                service true  -> that service gets an HPA
+#                                service false -> that service gets no HPA
+#   enabled: false             The global switch is "off" and wins over every
+#                              service: NO HPA is rendered for ANY service,
+#                              even one with its own autoscaling.enabled: true.
+#                              The per-service settings are kept, just ignored.
+#
+#   global   service   result
+#   true     true      HPA created
+#   true     false     no HPA
+#   false    true      no HPA   (global wins)
+#   false    false     no HPA
+#
+# Use `false` in a tenant values file to turn autoscaling off for the whole
+# tenant without editing services[]. With no HPA, each Deployment runs at its
+# own `replicas`. Existing HPAs are removed on sync only if Argo CD pruning is
+# enabled; otherwise they stay and keep controlling the replica count.
+autoscaling:
+  enabled: true
+# Autoscaling (per service, `autoscaling:` below) scales on CPU by default.
+# Each metric is optional and rendered only if its target is set: add
+# `targetMemoryUtilizationPercentage: <n>` to a service to also scale on
+# memory (the higher of the two replica counts wins). Memory is off by
+# default because most apps hold memory after load, so it rarely scales
+# back down. At least one target must be set when autoscaling.enabled.
 services:
   - name: qraie-redis-shared
     enabled: true
@@ -195,7 +255,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: qraie-redis-shared-data
@@ -203,6 +262,11 @@ services:
       readOnly: false
   - name: qraie-redis
     enabled: true
+    # Example of the per-service opt-out: no ExternalSecret and no envFrom
+    # entry for this service's own layer-3 secret (it still gets the
+    # tenant-common and service-common layers). Remove to use the default.
+    secrets:
+      enabled: false
     image:
       repository: redislabs/redisgears
       tag: 1.2.5
@@ -224,7 +288,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: qraie-redis-data
@@ -253,7 +316,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: hostPath
       path: /opt/bridge-cp-redis/dispatcher
@@ -296,7 +358,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: bridge-cp-wtl-sr-instances
@@ -338,7 +399,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: hostPath
       path: /vault/secrets
@@ -367,7 +427,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: erep-server
     enabled: true
@@ -392,7 +451,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: erep-generated
@@ -434,7 +492,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: qraie-attachments
@@ -471,7 +528,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: qraie-attachments
@@ -504,7 +560,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: admin-panel
     enabled: true
@@ -529,7 +584,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: wfm-api-gateway
     enabled: true
@@ -554,7 +608,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: wfm-ui
     enabled: true
@@ -579,7 +632,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: wfm-microservice
     enabled: true
@@ -604,7 +656,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: mcp-server
     enabled: true
@@ -629,7 +680,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: mcp-client
     enabled: true
@@ -654,7 +704,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: tranops-ui
     enabled: true
@@ -679,7 +728,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: tranops-backend
     enabled: true
@@ -704,7 +752,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: iot-broker-data
     enabled: true
@@ -729,7 +776,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: iot-broker-config
     enabled: true
@@ -754,7 +800,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: iot-broker-broker
     enabled: true
@@ -779,7 +824,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: iot-broker-admin
     enabled: true
@@ -804,7 +848,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: iot-broker-web
     enabled: true
@@ -829,7 +872,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: iot-broker-loconav-vision
     enabled: true
@@ -854,7 +896,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: enrollment-api
     enabled: true
@@ -879,7 +920,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: iot-vlm-deepface
@@ -912,7 +952,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: prism-ui
     enabled: true
@@ -937,7 +976,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: prism-backend
     enabled: true
@@ -962,7 +1000,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: hostPath
       path: /vault/secrets
@@ -995,7 +1032,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence: []
   - name: voxflow
     enabled: true
@@ -1020,7 +1056,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: pvc
       name: voxflow-agents
@@ -1057,7 +1092,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: hostPath
       path: /vault/secrets
@@ -1086,7 +1120,6 @@ services:
       minReplicas: 1
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
-      targetMemoryUtilizationPercentage: 80
     persistence:
     - type: configMap
       name: radicale-config

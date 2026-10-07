@@ -47,13 +47,13 @@ data:
       {{- end }}
       containers:
         - name: erep
-          image: "{{ $erep.image.repository }}:{{ $erep.image.tag }}"
+          image: "{{ $erep.image.repository }}:{{ include "tenant-app.imageTag" (dict "svc" $erep "imageTags" .Values.imageTags) }}"
           env:
             {{- range $key, $value := $erep.env }}
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ printf "%s-erep-server-secret" $.Values.tenant.id }}
+                  name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" "erep-server") }}
                   {{- if kindIs "map" $value }}
                   key: {{ $value.secretKey }}
                   {{- else }}

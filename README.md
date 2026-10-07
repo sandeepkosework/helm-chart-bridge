@@ -26,7 +26,7 @@ helm-chart-bridge/
     ├── ingress.yaml               single Ingress, one host, path-routed to each service
     ├── hpa.yaml                   one HorizontalPodAutoscaler per service with autoscaling.enabled
     ├── pvc.yaml                    one PersistentVolumeClaim per top-level persistence entry
-    ├── externalsecret.yaml         ExternalSecrets pulling Vault data into K8s Secrets
+    ├── externalsecret.yaml         the three layers of ExternalSecrets pulling Vault data into K8s Secrets
     ├── secretstore.yaml            per-tenant namespaced SecretStore (Kubernetes auth)
     ├── serviceaccount.yaml / rbac.yaml   tenant ServiceAccount + the erep-pod spawn permissions
     ├── storageclass.yaml            optional per-tenant StorageClass
@@ -53,6 +53,92 @@ autoscaling, env). A tenant only ever turns services off, via
 on override rather than merging elements, so a partial `services:` override
 would silently discard the chart's other service definitions instead of
 adjusting just one.
+
+## Secrets
+
+Secrets come from Vault through the External Secrets Operator, via the
+tenant's own `SecretStore` (`templates/secretstore.yaml`). There are three
+layers, each a K8s Secret injected with `envFrom`, least to most specific.
+When two layers define the same key, the later layer wins.
+
+| Layer | Values key | K8s Secret | Vault path | Injected into |
+|---|---|---|---|---|
+| 1 | `tenantcommonSecrets` | `<tenant.id>-tenant-common-secret` | `secret/k8s/tenant-common` | every enabled service |
+| 2 | `servicecommonSecrets` | `<tenant.id>-service-common-secret` | `secret/k8s/<tenant.id>/service-common` | every enabled service |
+| 3 | `serviceSecrets` | `<tenant.id>-<service>-service-secret` | `secret/k8s/<tenant.id>/<service>` | that service only |
+
+Layer 1 is the same for every tenant and is populated by hand. Layers 2 and 3
+build their Vault path from `tenant.id` (and the service's `name:`)
+automatically, so `remotePath` is normally left empty. To override it, set
+`remotePath`; it may contain the placeholders `<tenant_id>` and
+`<service-name>`.
+
+Layer 3 creates one ExternalSecret per enabled service. A service that has
+no secrets of its own can opt out, so no Vault path is needed for it (it
+still gets layers 1 and 2):
+
+```yaml
+services:
+  - name: qraie-redis
+    secrets:
+      enabled: false
+```
+
+A Vault path that is missing for an enabled service leaves its ExternalSecret
+in error, the Secret is never created, and the pod stays in
+`CreateContainerConfigError`. Running pods pick up changed Vault values only
+after a restart.
+
+## Image tags
+
+Each service's default tag is `services[].image.tag`. To pin a tag for one
+service in a tenant values file, use the `imageTags` map keyed by service
+name; it takes precedence over the default, and an empty value falls back to
+it. Only the tag can be overridden, never the repository.
+
+```yaml
+imageTags:
+  bridge: v1.4.2
+  erep-server: v2      # the erep Pod template follows this too
+```
+
+## Autoscaling
+
+A top-level `autoscaling.enabled` is the master switch (default `true`).
+Set it to `false` in a tenant values file to turn autoscaling off for every
+service at once; each Deployment then runs at its own `replicas`. When it is
+`true`, each service's own setting decides.
+
+Each service has an `autoscaling:` block in `values.yaml`. When the master
+switch and the service's `autoscaling.enabled` are both true the chart renders a `HorizontalPodAutoscaler`
+(`templates/hpa.yaml`) between `minReplicas` and `maxReplicas`. Scale-up is
+immediate; scale-down waits 300 seconds.
+
+Scaling is on **CPU by default**. Each metric is optional and rendered only
+if its target is set:
+
+| Metric | Values key | Default |
+|---|---|---|
+| CPU | `targetCPUUtilizationPercentage` | 70 |
+| Memory | `targetMemoryUtilizationPercentage` | not set (off) |
+
+To also scale a service on memory, set its target on that service. When both
+are set, Kubernetes uses whichever gives the higher replica count:
+
+```yaml
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+```
+
+Memory is off by default because most apps hold memory after load, so it
+rarely scales back down, and utilization is measured against the small
+default memory request (`128Mi`). With `enabled: true`, at least one target
+must be set or the render fails. Targets are a percentage of the container's
+resource *request*, and scaling needs metrics-server in the cluster.
 
 ## Releasing a change
 
