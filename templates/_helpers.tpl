@@ -39,3 +39,34 @@ false
 true
 {{- end -}}
 {{- end }}
+{{- /*
+Effective image tag for a services[] entry. Takes a dict with "svc" (the list
+element) and "imageTags" (the chart-level map). A tenant overrides one
+service's tag with `imageTags: {<service-name>: <tag>}` -- a map, so Helm
+deep-merges it and the tenant never has to repeat the services[] list.
+*/ -}}
+{{- define "tenant-app.imageTag" -}}
+{{- $override := get (default (dict) .imageTags) .svc.name -}}
+{{- toString (default .svc.image.tag $override) -}}
+{{- end }}
+{{- /*
+Vault path with placeholders resolved. Takes a dict with "path", "root" (the
+top-level context, for tenant.id) and optionally "service".
+*/ -}}
+{{- define "tenant-app.vaultPath" -}}
+{{- .path | replace "<tenant_id>" .root.Values.tenant.id | replace "<service-name>" (default "" .service) -}}
+{{- end }}
+{{- /* K8s Secret name for one service's own secret (layer 3). */ -}}
+{{- define "tenant-app.serviceSecretName" -}}
+{{- printf "%s-%s-%s" .root.Values.tenant.id .service .root.Values.serviceSecrets.secretName -}}
+{{- end }}
+{{- /*
+Whether a service gets its own layer-3 secret (ExternalSecret + envFrom
+entry). Takes a dict with "root" and "svc". True when the global
+serviceSecrets.enabled is on, unless the service opts out with
+`secrets: {enabled: false}` in its own services[] entry.
+*/ -}}
+{{- define "tenant-app.serviceSecretEnabled" -}}
+{{- $s := default (dict) .svc.secrets -}}
+{{- if and .root.Values.serviceSecrets.enabled (ne (toString (get $s "enabled")) "false") -}}true{{- else -}}false{{- end -}}
+{{- end }}

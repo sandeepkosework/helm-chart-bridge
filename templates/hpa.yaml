@@ -1,7 +1,7 @@
 {{- range $svc := .Values.services }}
 {{- $name := $svc.name }}
 {{- $autoscaling := default (dict) $svc.autoscaling }}
-{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") (default false $autoscaling.enabled) }}
+{{- if and (ne (toString $.Values.autoscaling.enabled) "false") (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") (default false $autoscaling.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -19,18 +19,25 @@ spec:
     scaleDown:
       stabilizationWindowSeconds: 300
   metrics:
+{{- if not (or $autoscaling.targetCPUUtilizationPercentage $autoscaling.targetMemoryUtilizationPercentage) }}
+{{- fail (printf "service %q: autoscaling.enabled needs targetCPUUtilizationPercentage and/or targetMemoryUtilizationPercentage" $name) }}
+{{- end }}
+{{- with $autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ $autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ . }}
+{{- end }}
+{{- with $autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ $autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ . }}
+{{- end }}
 ---
 {{- end }}
 {{- end }}
