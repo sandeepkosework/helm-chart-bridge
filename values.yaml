@@ -1,3 +1,5 @@
+
+
 nameOverride: tenant-app
 # Placeholders — every real deployment MUST override tenant.* via a
 # per-tenant values file (see examples/). Left unset-looking on purpose so
