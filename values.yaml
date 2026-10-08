@@ -212,11 +212,11 @@ imageTags: {}
 # Global autoscaling master switch. It is checked FIRST; a service's own
 # `autoscaling.enabled` (in services[] below) is only looked at if this is on.
 #
-#   enabled: true   (default)  The global switch is "on" and steps aside:
+#   enabled: true             The global switch is "on" and steps aside:
 #                              each service's own autoscaling.enabled decides.
 #                                service true  -> that service gets an HPA
 #                                service false -> that service gets no HPA
-#   enabled: false             The global switch is "off" and wins over every
+#   enabled: false  (default)  The global switch is "off" and wins over every
 #                              service: NO HPA is rendered for ANY service,
 #                              even one with its own autoscaling.enabled: true.
 #                              The per-service settings are kept, just ignored.
@@ -232,7 +232,7 @@ imageTags: {}
 # own `replicas`. Existing HPAs are removed on sync only if Argo CD pruning is
 # enabled; otherwise they stay and keep controlling the replica count.
 autoscaling:
-  enabled: true
+  enabled: false
 # Autoscaling (per service, `autoscaling:` below) scales on CPU by default.
 # Each metric is optional and rendered only if its target is set: add
 # `targetMemoryUtilizationPercentage: <n>` to a service to also scale on
