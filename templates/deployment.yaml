@@ -1,5 +1,8 @@
 {{- range $svc := .Values.services }}
 {{- $name := $svc.name }}
+{{- $portSource := default $.Values.portSource $svc.portSource | default "chart" }}
+{{- if not (has $portSource (list "chart" "secret")) }}{{- fail (printf "service %q: portSource must be chart or secret, got %q" $name $portSource) }}{{- end }}
+{{- $portEnv := ternary (default (list) $svc.portEnv) (list) (eq $portSource "chart") }}
 {{- $ownSecret := eq (include "tenant-app.serviceSecretEnabled" (dict "root" $ "svc" $svc)) "true" }}
 {{- if eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true" }}
 apiVersion: apps/v1
@@ -63,7 +66,7 @@ spec:
             - secretRef:
                 name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" $name) }}
 {{- end }}
-{{- if or (and $ownSecret (not (hasKey $svc.env "TENANT_ID"))) $svc.plainEnv $svc.serviceRefEnv }}
+{{- if or (and $ownSecret (not (hasKey $svc.env "TENANT_ID"))) $svc.plainEnv $svc.serviceRefEnv $portEnv }}
           env:
 {{- if and $ownSecret (not (hasKey $svc.env "TENANT_ID")) }}
             # Reference example: an explicit secretKeyRef for one key,
@@ -90,6 +93,16 @@ spec:
             # this chart's values.yaml. Only for values that aren't sensitive.
             - name: {{ $key }}
               value: {{ $value | quote }}
+{{- end }}
+{{- range $key := $portEnv }}
+{{- if not (hasKey (default (dict) $svc.plainEnv) $key) }}
+            # The port this app listens on, set from the first containerPort
+            # so it can't drift from the Service/ingress/probes and isn't
+            # left empty by an unfilled Vault key. In `env`, so it wins over
+            # the envFrom secrets.
+            - name: {{ $key }}
+              value: {{ (index $svc.ports 0).containerPort | toString | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- range $probeKey := list "startupProbe" "readinessProbe" "livenessProbe" }}
