@@ -209,6 +209,19 @@ disabledServices: []
 # Pod template (templates/erep-pod-configmap.yaml) follows erep-server's
 # effective tag too.
 imageTags: {}
+# Where services get their listen port (see each service's `portEnv`).
+#
+#   chart   (default)  Each name in a service's `portEnv` is set to that
+#                      service's first containerPort, in the container's
+#                      `env`. That beats the envFrom secrets, so the app
+#                      listens on the port the Service/ingress/probes use
+#                      even if Vault has a different or empty value.
+#   secret             `portEnv` is ignored: the port comes from the
+#                      service's Vault-backed secrets, as before.
+#
+# A service can set its own `portSource:` to override this default. A
+# service with no `portEnv` is never touched either way.
+portSource: chart
 # Global autoscaling master switch. It is checked FIRST; a service's own
 # `autoscaling.enabled` (in services[] below) is only looked at if this is on.
 #
@@ -363,6 +376,8 @@ services:
       REDIS_PORT:
         service: bridge-cp-conductor-redis
         field: port
+    portEnv:
+    - API_PORT
     ingressPath: /controlopsv2/api/
     resources:
       requests:
@@ -478,6 +493,8 @@ services:
     # of Vault -- change it here via a normal PR, no Vault CLI needed.
     plainEnv:
       NODE_ENV: production
+    portEnv:
+    - PORT
     ingressPath: /
     resources:
       requests:
@@ -512,6 +529,8 @@ services:
     ports:
     - containerPort: 30172
     env: {}
+    portEnv:
+    - API_PORT
     ingressPath: /controlops/api/
     resources:
       requests:
@@ -542,6 +561,8 @@ services:
     ports:
     - containerPort: 30174
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /galaxy/erepapi/
     resources:
       requests:
@@ -589,6 +610,8 @@ services:
     ports:
     - containerPort: 30176
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /workplace/api/
     resources:
       requests:
@@ -669,6 +692,8 @@ services:
     ports:
     - containerPort: 30180
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /workplace/
     resources:
       requests:
@@ -699,6 +724,8 @@ services:
     ports:
     - containerPort: 30182
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /workplace/admin-portal/
     resources:
       requests:
@@ -729,6 +756,9 @@ services:
     ports:
     - containerPort: 30184
     env: {}
+    portEnv:
+    - PORT
+    - SERVER_PORT
     ingressPath: /organization/wfm/api/
     resources:
       requests:
@@ -759,6 +789,8 @@ services:
     ports:
     - containerPort: 30188
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /organization/wfm/
     resources:
       requests:
@@ -789,6 +821,8 @@ services:
     ports:
     - containerPort: 9001
     env: {}
+    portEnv:
+    - SERVER_PORT
     ingressPath: null
     resources:
       requests:
@@ -837,6 +871,9 @@ services:
         periodSeconds: 10
         timeoutSeconds: 10
         failureThreshold: 5
+    portEnv:
+    - PORT
+    - MCP_SERVER_PORT
     ingressPath: null
     resources:
       requests:
@@ -867,6 +904,8 @@ services:
     ports:
     - containerPort: 30192
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /galaxy/slmapi/
     resources:
       requests:
@@ -897,6 +936,8 @@ services:
     ports:
     - containerPort: 30194
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /tranops
     resources:
       requests:
@@ -927,6 +968,11 @@ services:
     ports:
     - containerPort: 30196
     env: {}
+    # Env var(s) the app reads for its listen port; each is set to the first
+    # containerPort above (see templates/deployment.yaml), overriding any
+    # value (or empty string) from the Vault secrets.
+    portEnv:
+    - API_PORT
     ingressPath: /tranops/api
     resources:
       requests:
@@ -957,6 +1003,8 @@ services:
     ports:
     - containerPort: 3001
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /iot-broker/api/data/
     resources:
       requests:
@@ -987,6 +1035,8 @@ services:
     ports:
     - containerPort: 3002
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /iot-broker/api/config/
     resources:
       requests:
@@ -1017,6 +1067,8 @@ services:
     ports:
     - containerPort: 3003
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /iot-broker/
     resources:
       requests:
@@ -1107,6 +1159,8 @@ services:
     ports:
     - containerPort: 3040
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /vision
     resources:
       requests:
@@ -1151,6 +1205,8 @@ services:
         periodSeconds: 30
         timeoutSeconds: 10
         failureThreshold: 3
+    portEnv:
+    - PORT
     ingressPath: /enrollment/
     resources:
       requests:
@@ -1189,6 +1245,8 @@ services:
     ports:
     - containerPort: 28077
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /acl_server/api
     resources:
       requests:
@@ -1219,6 +1277,8 @@ services:
     ports:
     - containerPort: 28080
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /prism-ui
     resources:
       requests:
@@ -1249,6 +1309,8 @@ services:
     ports:
     - containerPort: 28078
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /prism/api
     resources:
       requests:
@@ -1287,6 +1349,8 @@ services:
     ports:
     - containerPort: 28079
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /prism-scanner
     resources:
       requests:
@@ -1317,6 +1381,8 @@ services:
     ports:
     - containerPort: 30524
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /voxflow
     resources:
       requests:
@@ -1359,6 +1425,8 @@ services:
     ports:
     - containerPort: 4200
     env: {}
+    portEnv:
+    - PORT
     ingressPath: /scheduler-agent/api
     resources:
       requests:

@@ -169,6 +169,39 @@ with a `t-` prefix for digit-leading tenant IDs), which resolves inside the
 tenant namespace. The render fails if the referenced service doesn't exist or
 is in `disabledServices`.
 
+## The port an app listens on
+
+Apps read their listen port from an env var (`PORT`, `API_PORT`,
+`SERVER_PORT`, ...). If that comes only from Vault, an unset or different
+value leaves the app on a port the Service, ingress and probes don't use (an
+empty one crashes it, e.g. `ERR_SOCKET_BAD_PORT`). So a service lists the
+variable name(s) in `portEnv`, and the chart sets each to the service's first
+`containerPort`:
+
+```yaml
+portEnv:
+- PORT
+- SERVER_PORT        # a service can list more than one
+```
+
+It renders as plain `env:` entries, which take precedence over the `envFrom`
+secrets. A key also set in `plainEnv` is left to `plainEnv`. Changing
+`containerPort` in `values.yaml` changes the app's port, the Service and the
+ingress together; probes with a hard-coded `port:` still have to be edited by
+hand. Only the first port is used, so list the app's listen port first.
+
+Where the port comes from is `portSource` (top level, default `chart`):
+
+| value | effect |
+|---|---|
+| `chart` | each `portEnv` name is set from `containerPort` |
+| `secret` | `portEnv` is ignored; the port comes from the Vault-backed secrets |
+
+A service can set its own `portSource:` to override the top-level one. A
+service without `portEnv` is never touched. `portEnv` is not set on
+`iot-broker-admin`, `iot-broker-web`, `microservice-qraie`, the redis services
+or `radicale`.
+
 ## Health checks
 
 A service can declare `probes:` in its `services[]` entry, with raw Kubernetes
