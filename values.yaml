@@ -512,7 +512,7 @@ services:
     # actually sensitive, so it's sourced straight from this file instead
     # of Vault -- change it here via a normal PR, no Vault CLI needed.
     plainEnv:
-      NODE_ENV: production
+      NODE_ENV: development
     portEnv:
     - PORT
     - VIRTUAL_PORT
