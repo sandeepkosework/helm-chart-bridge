@@ -520,6 +520,9 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
+
+## controlops-server
+      
   - name: controlops-server
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -534,7 +537,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - containerPort: 30172
+    - containerPort: 16006
     env: {}
     portEnv:
     - API_PORT
@@ -552,6 +555,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+
+# erep-server    
   - name: erep-server
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -566,7 +572,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - containerPort: 30174
+    - containerPort: 16008
     env: {}
     portEnv:
     - PORT
