@@ -108,22 +108,22 @@ ocirPullSecret:
 persistence:
   bridge-cp-wtl-sr-instances:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   bridge-cp-redis-dispatcher:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   bridge-cp-redis-data:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce        
   redis-data:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   # Dedicated PVCs for qraie-redis-shared/qraie-redis -- deliberately NOT
@@ -134,37 +134,37 @@ persistence:
   # templates/deployment.yaml already dedupes safely).
   qraie-redis-shared-data:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   qraie-redis-data:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   erep-generated:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   erep-logs:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   qraie-attachments:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   iot-vlm-deepface:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   iot-vlm-db:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   prism-videos:
@@ -174,17 +174,17 @@ persistence:
     - ReadWriteOnce
   voxflow-agents:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   voxflow-mcp:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
   radicale-data:
     enabled: true
-    size: 10Gi
+    size: 5Gi
     accessModes:
     - ReadWriteOnce
 # Listing a service's name here disables it regardless of its own
