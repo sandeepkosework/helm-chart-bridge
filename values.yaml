@@ -1097,7 +1097,7 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
+      repository: iad.ocir.io/hbssoc/iot-broker-broker-service
       tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
@@ -1133,7 +1133,7 @@ services:
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
-      tag: 'stg:'
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
