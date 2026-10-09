@@ -1233,8 +1233,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/iot-vlm
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1313,6 +1313,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## prism-ui
+    
   - name: prism-ui
     enabled: true
     # Which secret layers this service receives via envFrom (see the
