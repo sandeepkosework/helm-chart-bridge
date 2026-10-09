@@ -311,6 +311,9 @@ services:
       name: qraie-redis-shared-data
       mountPath: /data
       readOnly: false
+
+## qraie Redis
+      
   - name: qraie-redis
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -346,6 +349,7 @@ services:
       mountPath: /data
       readOnly: false
 
+## bridge-cp-conductor
 
   - name: bridge-cp-conductor
     enabled: true
@@ -472,6 +476,9 @@ services:
       name: bridge-cp-redis-dispatcher
       mountPath: /opt/bridge-cp-redis/dispatcher
       readOnly: false
+
+##Bridge
+      
   - name: bridge
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -486,7 +493,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - containerPort: 30170
+    - containerPort: 16004
     env: {}
     # Reference example (see templates/deployment.yaml): NODE_ENV isn't
     # actually sensitive, so it's sourced straight from this file instead
@@ -594,6 +601,9 @@ services:
       name: erep-pod-template
       mountPath: /etc/erep-pod-template
       readOnly: true
+
+## qraie-api-gateway
+      
   - name: qraie-api-gateway
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -608,7 +618,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - containerPort: 30176
+    - containerPort: 16010
     env: {}
     portEnv:
     - PORT
@@ -676,6 +686,9 @@ services:
       name: qraie-attachments
       mountPath: /src/app/uploads
       readOnly: false
+
+## qraie-ui
+      
   - name: qraie-ui
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -740,6 +753,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## wfm-api-gateway
+    
   - name: wfm-api-gateway
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -754,7 +770,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - containerPort: 30184
+    - containerPort: 16018
     env: {}
     portEnv:
     - PORT
@@ -805,6 +821,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## wfm-microservice
+    
   - name: wfm-microservice
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -952,6 +971,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## tranops-backend
+    
   - name: tranops-backend
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -966,7 +988,7 @@ services:
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
-    - containerPort: 30196
+    - containerPort: 16030
     env: {}
     # Env var(s) the app reads for its listen port; each is set to the first
     # containerPort above (see templates/deployment.yaml), overriding any
@@ -987,6 +1009,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+##iot-broker-data
+    
   - name: iot-broker-data
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1019,6 +1044,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## iot-broker-config
+    
   - name: iot-broker-config
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1051,6 +1079,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## iot-broker-broker
+    
   - name: iot-broker-broker
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1060,8 +1091,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1083,6 +1114,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## iot-broker-admin
+    
   - name: iot-broker-admin
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1092,8 +1126,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
+      tag: 'stg:'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1113,6 +1147,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## iot-broker-web
+    
   - name: iot-broker-web
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1122,8 +1159,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/iot-broker-web-portal
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1143,6 +1180,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## iot-broker-loconav-vision
+    
   - name: iot-broker-loconav-vision
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1175,6 +1215,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## enrollment-api
+    
   - name: enrollment-api
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1229,6 +1272,9 @@ services:
       name: iot-vlm-db
       mountPath: /app/db
       readOnly: false
+
+## acl-server
+      
   - name: acl-server
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1293,6 +1339,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## prism-backend
+    
   - name: prism-backend
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1333,6 +1382,9 @@ services:
       name: prism-videos
       mountPath: /data/prism-videos
       readOnly: false
+
+## prism-scanner
+      
   - name: prism-scanner
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1365,6 +1417,9 @@ services:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
     persistence: []
+
+## voxflow
+    
   - name: voxflow
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1409,6 +1464,9 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
+
+## scheduler-agent
+      
   - name: scheduler-agent
     enabled: true
     # Which secret layers this service receives via envFrom (see the
@@ -1445,6 +1503,9 @@ services:
       path: /vault/secrets
       mountPath: /vault/secrets
       readOnly: true
+
+# radicale
+      
   - name: radicale
     enabled: true
     # Which secret layers this service receives via envFrom (see the
