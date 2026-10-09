@@ -65,7 +65,7 @@ tenantcommonSecrets:
   enabled: true
   secretName: tenant-common-secret
   remotePath: secret/k8s/tenant-common
-  refreshInterval: 1h
+  refreshInterval: 1m
 # 2. Values shared across all of THIS tenant's own services, but not with
 # other tenants (e.g. this tenant's own Redis host/password). One K8s
 # Secret per tenant, injected into EVERY enabled service automatically.
@@ -73,7 +73,7 @@ servicecommonSecrets:
   enabled: true
   secretName: service-common-secret
   remotePath: ""   # default: secret/k8s/<tenant.id>/service-common
-  refreshInterval: 1h
+  refreshInterval: 1m
 # 3. Secrets scoped to a single service of a single tenant: one K8s Secret
 # per enabled service (<tenant.id>-<service-name>-<secretName>), injected
 # into that service ONLY.
@@ -90,7 +90,7 @@ serviceSecrets:
   enabled: true
   secretName: service-secret
   remotePath: ""   # default: secret/k8s/<tenant.id>/<service-name>
-  refreshInterval: 1h
+  refreshInterval: 1m
 # OCIR pull credentials for the private iad.ocir.io images most services
 # above use -- ONE Vault path, same as commonSecrets, read by every tenant's
 # own SecretStore and materialized as a kubernetes.io/dockerconfigjson
