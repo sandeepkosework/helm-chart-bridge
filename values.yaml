@@ -495,6 +495,8 @@ services:
       NODE_ENV: production
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /
     resources:
       requests:
@@ -563,6 +565,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /galaxy/erepapi/
     resources:
       requests:
@@ -612,6 +616,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /workplace/api/
     resources:
       requests:
@@ -694,6 +700,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /workplace/
     resources:
       requests:
@@ -726,6 +734,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /workplace/admin-portal/
     resources:
       requests:
@@ -759,6 +769,8 @@ services:
     portEnv:
     - PORT
     - SERVER_PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /organization/wfm/api/
     resources:
       requests:
@@ -791,6 +803,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /organization/wfm/
     resources:
       requests:
@@ -874,6 +888,8 @@ services:
     portEnv:
     - PORT
     - MCP_SERVER_PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: null
     resources:
       requests:
@@ -906,6 +922,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /galaxy/slmapi/
     resources:
       requests:
@@ -938,6 +956,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /tranops
     resources:
       requests:
@@ -1005,6 +1025,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /iot-broker/api/data/
     resources:
       requests:
@@ -1037,6 +1059,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /iot-broker/api/config/
     resources:
       requests:
@@ -1069,6 +1093,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /iot-broker/
     resources:
       requests:
@@ -1161,6 +1187,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /vision
     resources:
       requests:
@@ -1207,6 +1235,8 @@ services:
         failureThreshold: 3
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /enrollment/
     resources:
       requests:
@@ -1247,6 +1277,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /acl_server/api
     resources:
       requests:
@@ -1279,6 +1311,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /prism-ui
     resources:
       requests:
@@ -1311,6 +1345,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /prism/api
     resources:
       requests:
@@ -1351,6 +1387,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /prism-scanner
     resources:
       requests:
@@ -1383,6 +1421,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /voxflow
     resources:
       requests:
@@ -1427,6 +1467,8 @@ services:
     env: {}
     portEnv:
     - PORT
+    - VIRTUAL_PORT
+    - API_PORT
     ingressPath: /scheduler-agent/api
     resources:
       requests:
