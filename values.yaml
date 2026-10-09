@@ -826,7 +826,7 @@ services:
     # secrets section at the top). Each is on unless set to false here.
     secrets:
       tenantCommon: true    # layer 1 (tenantcommonSecrets)
-      serviceCommon: false   # layer 2 (servicecommonSecrets)
+      serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: false       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/wfm-ui
