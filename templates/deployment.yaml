@@ -26,6 +26,12 @@ spec:
         tenant: {{ $.Values.tenant.name | quote }}
     spec:
       serviceAccountName: {{ include "tenant-app.name" $ }}
+{{- $psc := $.Values.podSecurityContext }}
+{{- if hasKey $svc "podSecurityContext" }}{{- $psc = $svc.podSecurityContext }}{{- end }}
+{{- if $psc }}
+      securityContext:
+{{ toYaml $psc | indent 8 }}
+{{- end }}
       imagePullSecrets:
 {{- range $.Values.imagePullSecrets }}
         - name: {{ . }}
