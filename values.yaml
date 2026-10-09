@@ -12,6 +12,19 @@ tenant:
   domain: changeme.qraie.ai
 imagePullSecrets:
 - ocir-registry
+# Pod-level security context for every service's pods. fsGroup makes mounted
+# volumes group-writable for the container's process: PersistentVolumes are
+# created root-owned, so an app that runs as a non-root user (e.g. `USER node`)
+# otherwise cannot create folders in them -- the crash
+#   EACCES: permission denied, mkdir '/src/app/uploads/ask'
+# Kubernetes also adds fsGroup as a supplementary group of the container's
+# process, so this works whatever UID the image runs as. OnRootMismatch changes
+# ownership only when the volume's root isn't already right, instead of
+# recursively on every start. Override per service with services[].
+# podSecurityContext (set `podSecurityContext: {}` there to opt a service out).
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
 storage:
   createStorageClass: true
   reclaimPolicy: Delete
