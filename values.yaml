@@ -1374,8 +1374,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/prism-ui
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1411,8 +1411,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/prism-backend
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1456,8 +1456,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/prism-scanner
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
@@ -1493,8 +1493,8 @@ services:
       serviceCommon: true   # layer 2 (servicecommonSecrets)
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
-      repository: nginx
-      tag: 'latest'
+      repository: iad.ocir.io/hbssoc/voxflow
+      tag: 'stg'
       pullPolicy: IfNotPresent
     replicas: 1
     ports:
