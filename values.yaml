@@ -806,6 +806,10 @@ services:
     - SERVER_PORT
     - VIRTUAL_PORT
     - API_PORT
+    # Not sensitive, so set here instead of Vault. Listen on all interfaces
+    # so the Service can reach the pod.
+    plainEnv:
+      SERVER_HOST: 0.0.0.0
     ingressPath: /organization/wfm/api/
     resources:
       requests:
