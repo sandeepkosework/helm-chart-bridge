@@ -19,9 +19,25 @@ storage:
 ingress:
   enabled: true
   className: nginx
-  annotations: {}
+  # Applied to the tenant's Ingress. Long proxy timeouts (seconds) keep
+  # websocket / long-running requests (e.g. socket.io, SSE) from being cut
+  # off by ingress-nginx's 60s defaults. A tenant values file can add or
+  # override single keys here -- annotations is a map, so Helm merges it.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+  # TLS for the tenant host. enabled: true lists tenant.domain in the Ingress
+  # `tls:` section, which also makes ingress-nginx redirect HTTP to HTTPS.
+  #   secretName: ''   (default) no Secret is named, so the controller serves
+  #                    its DEFAULT certificate (--default-ssl-certificate,
+  #                    typically a wildcard such as *.qraie.ai). Nothing to
+  #                    create per tenant; tenant.domain must be covered by it.
+  #   secretName: x    use a TLS Secret named x in the tenant's own namespace
+  #                    (an Ingress can't reference a Secret in another one).
+  # enabled: false = plain HTTP, no redirect.
   tls:
-    enabled: false
+    enabled: true
     secretName: ''
 # Vault connection for this tenant's own SecretStore (templates/secretstore.yaml)
 # -- one namespaced SecretStore per tenant release, authenticating via
