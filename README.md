@@ -222,6 +222,17 @@ compose's `depends_on: condition: service_healthy` (mcp-client waiting for
 mcp-server) has no equivalent here; readiness only keeps traffic away from a
 pod that isn't ready yet.
 
+## TLS
+
+`ingress.tls.enabled` (default `true`) adds `tenant.domain` to the Ingress
+`tls:` section, so ingress-nginx serves HTTPS and redirects HTTP to HTTPS.
+With `ingress.tls.secretName` empty (the default) no Secret is referenced and
+the controller serves its **default certificate**, normally a wildcard
+(`--default-ssl-certificate=<ns>/<secret>` on the controller), so nothing has
+to be created per tenant as long as the cert covers `tenant.domain`. To use a
+specific certificate instead, set `secretName` to a TLS Secret that exists in
+the tenant's own namespace. Set `enabled: false` for plain HTTP.
+
 ## Releasing a change
 
 This chart is consumed by the `ApplicationSet`'s Helm chart source pinned to
