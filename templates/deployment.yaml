@@ -26,6 +26,12 @@ spec:
         tenant: {{ $.Values.tenant.name | quote }}
     spec:
       serviceAccountName: {{ include "tenant-app.name" $ }}
+{{- if $.Values.hostAliasIp }}
+      hostAliases:
+        - ip: {{ $.Values.hostAliasIp | quote }}
+          hostnames:
+            - {{ $.Values.tenant.domain | quote }}
+{{- end }}
 {{- $psc := $.Values.podSecurityContext }}
 {{- if hasKey $svc "podSecurityContext" }}{{- $psc = $svc.podSecurityContext }}{{- end }}
 {{- if $psc }}

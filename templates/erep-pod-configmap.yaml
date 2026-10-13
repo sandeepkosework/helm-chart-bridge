@@ -38,6 +38,12 @@ data:
         app: erep-job
     spec:
       serviceAccountName: {{ include "tenant-app.name" . }}
+      {{- if .Values.hostAliasIp }}
+      hostAliases:
+        - ip: {{ .Values.hostAliasIp | quote }}
+          hostnames:
+            - {{ .Values.tenant.domain | quote }}
+      {{- end }}
       restartPolicy: Never
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:

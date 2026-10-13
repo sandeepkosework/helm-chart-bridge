@@ -10,6 +10,12 @@ tenant:
   name: changeme
   namespace: changeme
   domain: changeme.qraie.ai
+# Stopgap while tenant hostnames have no DNS record: adds an /etc/hosts entry
+# mapping this tenant's domain (tenant.domain above) to this IP in every pod the
+# chart creates (each service's Deployment and the erep Pod template). Set to ""
+# to disable, e.g. once DNS resolves the names. Pods pick it up when they are
+# (re)created, so existing ones need a restart.
+hostAliasIp: "192.168.85.207"
 imagePullSecrets:
 - ocir-registry
 # Pod-level security context for every service's pods. fsGroup makes mounted
