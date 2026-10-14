@@ -21,12 +21,55 @@ spec:
         paths:
 {{- range $svc := .Values.services }}
 {{- $name := $svc.name }}
-{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.ingressPath }}
+{{- /* Services with ingressRewriteTo get their own Ingress below. */}}
+{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.ingressPath (not $svc.ingressRewriteTo) }}
           - path: {{ $svc.ingressPath }}
             pathType: Prefix
             backend:
               service:
                 name: {{ printf "%s-%s" (include "tenant-app.slug" $) $name }}
+                port:
+                  number: {{ (index $svc.ports 0).containerPort }}
+{{- end }}
+{{- end }}
+{{- /*
+One extra Ingress per service that sets ingressRewriteTo -- the ingress-nginx
+equivalent of compose's VIRTUAL_PATH / VIRTUAL_DEST: the ingressPath prefix is
+replaced by ingressRewriteTo before the request reaches the pod, e.g.
+ingressPath /galaxy/erepapi/ + ingressRewriteTo / sends
+/galaxy/erepapi/api/ereps to the pod as /api/ereps.
+The rewrite-target annotation applies to every path of its Ingress, so each
+rewriting service needs its own. Note: use-regex on any Ingress of a host makes
+ingress-nginx treat all of that host's paths as (case-insensitive) regexes.
+*/}}
+{{- range $svc := .Values.services }}
+{{- if and (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") $svc.ingressPath $svc.ingressRewriteTo }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ printf "%s-%s" (include "tenant-app.name" $) $svc.name }}
+  annotations:
+{{ toYaml (merge (dict "nginx.ingress.kubernetes.io/use-regex" "true" "nginx.ingress.kubernetes.io/rewrite-target" (printf "%s/$2" (trimSuffix "/" $svc.ingressRewriteTo))) $.Values.ingress.annotations) | indent 4 }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+{{- if $.Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $.Values.tenant.domain }}
+{{- if $.Values.ingress.tls.secretName }}
+      secretName: {{ $.Values.ingress.tls.secretName }}
+{{- end }}
+{{- end }}
+  rules:
+    - host: {{ $.Values.tenant.domain }}
+      http:
+        paths:
+          - path: {{ printf "%s(/|$)(.*)" (trimSuffix "/" $svc.ingressPath) | quote }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ printf "%s-%s" (include "tenant-app.slug" $) $svc.name }}
                 port:
                   number: {{ (index $svc.ports 0).containerPort }}
 {{- end }}

@@ -35,6 +35,12 @@ storage:
   createStorageClass: true
   reclaimPolicy: Delete
   volumeBindingMode: Immediate
+# Per-service path rewrite (compose's VIRTUAL_PATH / VIRTUAL_DEST): a service
+# with `ingressPath` AND `ingressRewriteTo` gets its own Ingress that replaces
+# the ingressPath prefix with ingressRewriteTo before the request reaches the
+# pod, e.g. ingressPath /galaxy/erepapi/ + ingressRewriteTo "/" turns
+# /galaxy/erepapi/api/ereps into /api/ereps. Without ingressRewriteTo the path
+# is passed through unchanged, in the main Ingress. See templates/ingress.yaml.
 ingress:
   enabled: true
   className: nginx
@@ -418,6 +424,7 @@ services:
     portEnv:
     - API_PORT
     ingressPath: /controlopsv2/api/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -579,6 +586,7 @@ services:
     portEnv:
     - API_PORT
     ingressPath: /controlops/api/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -616,6 +624,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /galaxy/erepapi/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -670,6 +679,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /workplace/api/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -757,6 +767,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /workplace/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -791,6 +802,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /workplace/admin-portal/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -833,6 +845,7 @@ services:
     plainEnv:
       SERVER_HOST: 0.0.0.0
     ingressPath: /organization/wfm/api/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -867,6 +880,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /organization/wfm/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -989,6 +1003,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /galaxy/slmapi/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -1061,6 +1076,7 @@ services:
     portEnv:
     - API_PORT
     ingressPath: /tranops/api
+    ingressRewriteTo: "/api"
     resources:
       requests:
         cpu: 100m
@@ -1098,6 +1114,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /iot-broker/api/data/
+    ingressRewriteTo: "/api/data/"
     resources:
       requests:
         cpu: 100m
@@ -1135,6 +1152,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /iot-broker/api/config/
+    ingressRewriteTo: "/api/config/"
     resources:
       requests:
         cpu: 100m
@@ -1172,6 +1190,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /iot-broker/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -1205,6 +1224,7 @@ services:
     - containerPort: 80
     env: {}
     ingressPath: /iot-broker/admin/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -1326,6 +1346,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /enrollment/
+    ingressRewriteTo: "/"
     resources:
       requests:
         cpu: 100m
@@ -1371,6 +1392,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /acl_server/api
+    ingressRewriteTo: "/api"
     resources:
       requests:
         cpu: 100m
@@ -1576,6 +1598,7 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /scheduler-agent/api
+    ingressRewriteTo: "/api"
     resources:
       requests:
         cpu: 100m
