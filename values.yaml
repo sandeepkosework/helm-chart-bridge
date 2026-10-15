@@ -718,8 +718,10 @@ services:
       tag: 'stg-hbssv'
       pullPolicy: IfNotPresent
     replicas: 1
+    # The app listens on 4000 (its MS_PORT in bridgeMetaInfo), not 80; there is
+    # no portEnv here, so the chart cannot change it.
     ports:
-    - containerPort: 80
+    - containerPort: 4000
     env: {}
     ingressPath: null
     resources:
