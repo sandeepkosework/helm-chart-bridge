@@ -1,0 +1,46 @@
+# Radicale Configuration
+# Mounted read-only at /config/config inside the container.
+# Restart the container after any change.
+
+[server]
+# Listen on all interfaces inside Docker.
+# External access is via the mapped host port (5233) or your reverse proxy.
+hosts = 0.0.0.0:5232
+
+# Maximum upload size (bytes) — 10MB is generous for calendar data
+max_content_length = 10000000
+
+[auth]
+# htpasswd file — created by setup-users.sh
+type = htpasswd
+htpasswd_filename = /data/users
+# bcrypt is the secure option. Do not use md5 or plain.
+htpasswd_encryption = bcrypt
+
+# Delay after failed auth attempt — rate-limits brute force
+delay = 1
+
+[storage]
+# All calendar data stored here. Docker volume maps this to host.
+filesystem_folder = /data/collections
+
+# Hook script path (leave empty unless you need CalDAV change webhooks)
+# For Prism inbound integration, we use a polling bridge instead.
+hook =
+
+[rights]
+# Per-user/per-calendar access control
+type = from_file
+file = /config/rights
+
+[web]
+# Built-in web UI (Radicale's own — basic)
+# Set to 'none' to disable. We use our own React UI.
+type = none
+
+[logging]
+# Options: debug, info, warning, error
+level = info
+
+# Log to stdout — Docker captures it
+mask_passwords = true

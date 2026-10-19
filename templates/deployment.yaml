@@ -134,6 +134,9 @@ spec:
 {{- end }}
             - name: {{ printf "%s-%s" $name $volKey | trunc 63 | trimSuffix "-" }}
               mountPath: {{ $v.mountPath }}
+{{- if $v.subPath }}
+              subPath: {{ $v.subPath }}
+{{- end }}
               readOnly: {{ default false $v.readOnly }}
 {{- end }}
 {{- end }}

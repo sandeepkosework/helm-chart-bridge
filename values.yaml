@@ -1654,10 +1654,12 @@ services:
     - type: configMap
       name: radicale-config
       mountPath: /config/config
+      subPath: config
       readOnly: true
     - type: configMap
       name: radicale-rights
       mountPath: /config/rights
+      subPath: rights
       readOnly: true
     - type: pvc
       name: radicale-data

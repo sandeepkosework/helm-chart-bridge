@@ -1,0 +1,61 @@
+# Radicale Rights File
+# Controls which authenticated users can access which calendar collections.
+# Pattern matching: user and collection are regex. Permissions: R=read collection, r=read objects, W=write collection, w=write objects
+# First matching rule wins.
+
+# ─────────────────────────────────────────────────────────────────
+# SCHEDULER AGENT SYSTEM ACCOUNT
+# The scheduler-agent user has full access to everything.
+# This is the service account used by the Scheduler Agent backend.
+# Never share this password — treat it as a service credential.
+# ─────────────────────────────────────────────────────────────────
+[scheduler-agent-root]
+user: scheduler-agent
+collection: .*
+permissions: RrWw
+
+# ─────────────────────────────────────────────────────────────────
+# ADMIN ACCOUNT
+# Full access to everything. For DevOps/admin use only.
+# ─────────────────────────────────────────────────────────────────
+[admin-root]
+user: admin
+collection: .*
+permissions: RrWw
+
+# ─────────────────────────────────────────────────────────────────
+# PERSONAL CALENDARS
+# Each user has full access to their own home folder.
+# Pattern: /{username}/ and /{username}/{anything}/
+# ─────────────────────────────────────────────────────────────────
+[personal-own-root]
+user: .+
+collection: {user}
+permissions: RrWw
+
+[personal-own-calendars]
+user: .+
+collection: {user}/.*
+permissions: RrWw
+
+# ─────────────────────────────────────────────────────────────────
+# SHARED CALENDARS
+# Shared calendars live under /shared/{calendar-name}/
+# Any authenticated user can read shared calendars.
+# Only the calendar creator (owner) can write — enforced by naming:
+#   /shared/{owner}-{calendar-name}/ — owner is the username prefix.
+# The scheduler-agent account handles writes on behalf of users (covered above).
+# ─────────────────────────────────────────────────────────────────
+
+# Any authenticated user can discover and read shared calendars
+[shared-read]
+user: .+
+collection: shared/.*
+permissions: Rr
+
+# Calendar owner (prefix match) can write their shared calendar
+# e.g. user 'john' can write to 'shared/john-project-phoenix'
+[shared-write-owner]
+user: .+
+collection: shared/{user}-.*
+permissions: RrWw
