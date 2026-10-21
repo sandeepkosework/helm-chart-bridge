@@ -1,0 +1,33 @@
+{{- /*
+radicale's two config files, from files/radicale/. The radicale service (values.yaml)
+mounts them with subPath at /config/config and /config/rights -- they have to be single
+files, not directories, and the config's `file = /config/rights` points at the second one.
+
+Rendered only while radicale is actually enabled for this tenant. The service has no
+checksum annotation, so run `kubectl rollout restart deploy/radicale` after changing them
+(subPath mounts are not refreshed in a running pod anyway).
+*/}}
+{{- range $svc := .Values.services }}
+{{- if and (eq $svc.name "radicale") (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: radicale-config
+  labels:
+    {{- include "tenant-app.labels" $ | nindent 4 }}
+data:
+  config: |
+{{ $.Files.Get "files/radicale/config" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: radicale-rights
+  labels:
+    {{- include "tenant-app.labels" $ | nindent 4 }}
+data:
+  rights: |
+{{ $.Files.Get "files/radicale/rights" | indent 4 }}
+---
+{{- end }}
+{{- end }}
