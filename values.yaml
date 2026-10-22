@@ -228,6 +228,19 @@ persistence:
     size: 5Gi
     accessModes:
     - ReadWriteOnce
+# The image erep-server runs for each erep it starts (the erep-template image its code
+# used to `docker pull`), and how the Pod/Service it creates are shaped. See
+# templates/erep-pod-configmap.yaml. Pods get their environment from erep-server, not from here.
+erepTemplate:
+  image: iad.ocir.io/hbssoc/erep-template:stg
+  port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: '1'
+      memory: 1Gi
 # Listing a service's name here disables it regardless of its own
 # `enabled: true` in the services[] entry above -- disabledServices always
 # wins over a service's own enabled flag, never the other way around.

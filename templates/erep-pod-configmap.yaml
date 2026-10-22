@@ -1,25 +1,21 @@
 {{- /*
-Template for the one-off erep Pod that erep-server creates on demand,
-replacing the docker.sock-spawned sibling container from the original
-compose (see erep-server's persistence entry in values.yaml and
-templates/rbac.yaml's "create" verb). Shipped as a ConfigMap (key:
-erep-pod.yaml), mounted into erep-server at /etc/erep-pod-template via its
-own configMap-type persistence entry — erep-server reads this manifest and
-POSTs it to the Kubernetes API, using its own ServiceAccount token, whenever
-a user triggers erep creation from the bridge application.
+Templates for the Pod and Service that erep-server creates for each erep, replacing the
+sibling container it used to start through docker.sock (`docker run`). Shipped as a ConfigMap
+(keys: erep-pod.yaml, erep-service.yaml), mounted into erep-server at /etc/erep-pod-template
+via its own configMap-type persistence entry in values.yaml. erep-server reads the manifests
+and POSTs them to the Kubernetes API with its own ServiceAccount token (see rbac.yaml).
 
-Runs the same image/env as erep-server itself — no separate child-container
-image was ever declared for it. Carries the same tenant ServiceAccount so
-the spawned Pod can watch its own status and self-delete on completion
-(get/watch/list/delete — see rbac.yaml), without needing "create" itself.
-metadata.name is a generateName (not fixed) so each user-triggered erep
-creation gets its own Pod — the caller must use "create", not "apply", since
-generateName isn't supported by server-side apply.
+erep-server fills in, per erep:
+  metadata.name     the container name it already uses (both the Pod and the Service)
+  label `erep`      the same name, which is what the Service selects on
+  containers[0].env the variables it used to pass with `docker run -e`
+  the Service port  the erep's port (what erep-server puts in http://<name>:<port>); it
+                    forwards to the template's container port
+
+The image is the erep-template image (values.yaml `erepTemplate.image`), not erep-server's
+own. Nothing here needs a volume: the erep-template image keeps no state, so the Pod does
+not mount the PVCs erep-server uses (they are ReadWriteOnce).
 */}}
-{{- $erep := dict }}
-{{- range .Values.services }}
-{{- if eq .name "erep-server" }}{{ $erep = . }}{{- end }}
-{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -31,20 +27,20 @@ data:
     apiVersion: v1
     kind: Pod
     metadata:
-      generateName: {{ printf "%s-erep-" .Values.tenant.id | lower }}
       namespace: {{ .Release.Namespace }}
       labels:
         {{- include "tenant-app.labels" . | nindent 8 }}
-        app: erep-job
+        app: erep
     spec:
-      serviceAccountName: {{ include "tenant-app.name" . }}
+      # An erep makes no Kubernetes API calls, so it gets no ServiceAccount token.
+      automountServiceAccountToken: false
       {{- if .Values.hostAliasIp }}
       hostAliases:
         - ip: {{ .Values.hostAliasIp | quote }}
           hostnames:
             - {{ .Values.tenant.domain | quote }}
       {{- end }}
-      restartPolicy: Never
+      restartPolicy: Always
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.imagePullSecrets }}
@@ -53,31 +49,37 @@ data:
       {{- end }}
       containers:
         - name: erep
-          image: "{{ include "tenant-app.image" (dict "svc" $erep "serviceConfig" .Values.serviceConfig) }}"
-          env:
-            {{- range $key, $value := $erep.env }}
-            - name: {{ $key }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" "erep-server") }}
-                  {{- if kindIs "map" $value }}
-                  key: {{ $value.secretKey }}
-                  {{- else }}
-                  key: {{ $key }}
-                  {{- end }}
-                  optional: true
-            {{- end }}
-          volumeMounts:
-            - name: erep-generated
-              mountPath: /app/generated-ereps
-            - name: erep-logs
-              mountPath: /app/logs
+          image: {{ .Values.erepTemplate.image | quote }}
+          ports:
+            - containerPort: {{ .Values.erepTemplate.port }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.erepTemplate.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.erepTemplate.port }}
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            failureThreshold: 3
           resources:
-            {{- toYaml $erep.resources | nindent 12 }}
-      volumes:
-        - name: erep-generated
-          persistentVolumeClaim:
-            claimName: {{ printf "%s-erep-generated-pvc" .Values.tenant.id }}
-        - name: erep-logs
-          persistentVolumeClaim:
-            claimName: {{ printf "%s-erep-logs-pvc" .Values.tenant.id }}
+            {{- toYaml .Values.erepTemplate.resources | nindent 12 }}
+  erep-service.yaml: |
+    apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: {{ .Release.Namespace }}
+      labels:
+        {{- include "tenant-app.labels" . | nindent 8 }}
+        app: erep
+    spec:
+      type: ClusterIP
+      ports:
+        - port: 0   # erep-server sets the erep's port
+          targetPort: {{ .Values.erepTemplate.port }}
+      # erep-server sets `selector: {erep: <name>}` -- matching the `erep` label it puts on the
+      # Pod -- so a Service reaches only its own erep. Left out here on purpose: a selector of
+      # just `app: erep` would spread traffic across every erep in the namespace.
