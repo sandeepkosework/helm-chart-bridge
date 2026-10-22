@@ -16,6 +16,10 @@ tenant:
 # to disable, e.g. once DNS resolves the names. Pods pick it up when they are
 # (re)created, so existing ones need a restart.
 hostAliasIp: "192.168.85.207"
+# true = the tenant is archived: every service runs zero replicas, the autoscalers and the ingress are
+# not rendered, and everything else (namespace, volumes, secrets) stays, so setting it back to false
+# starts the tenant exactly as it was. The operator sets this in the tenant's file; see the README.
+archived: false
 imagePullSecrets:
 - ocir-registry
 # Pod-level security context for every service's pods. fsGroup makes mounted

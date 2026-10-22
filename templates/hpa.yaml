@@ -1,7 +1,7 @@
 {{- range $svc := .Values.services }}
 {{- $name := $svc.name }}
 {{- $autoscaling := default (dict) $svc.autoscaling }}
-{{- if and (ne (toString $.Values.autoscaling.enabled) "false") (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") (default false $autoscaling.enabled) }}
+{{- if and (not $.Values.archived) (ne (toString $.Values.autoscaling.enabled) "false") (eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true") (default false $autoscaling.enabled) }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
