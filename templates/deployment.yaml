@@ -1,3 +1,4 @@
+{{- include "tenant-app.validateOverrides" . -}}
 {{- range $svc := .Values.services }}
 {{- $name := $svc.name }}
 {{- $portSource := default $.Values.portSource $svc.portSource | default "chart" }}
@@ -12,7 +13,7 @@ metadata:
   labels:
     {{- include "tenant-app.labels" $ | nindent 4 }}
 spec:
-  replicas: {{ $svc.replicas }}
+  replicas: {{ include "tenant-app.replicas" (dict "svc" $svc "replicaOverrides" $.Values.replicaOverrides) }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "tenant-app.name" $ }}
@@ -44,7 +45,7 @@ spec:
 {{- end }}
       containers:
         - name: {{ $name }}
-          image: "{{ $svc.image.repository }}:{{ include "tenant-app.imageTag" (dict "svc" $svc "imageTags" $.Values.imageTags) }}"
+          image: "{{ include "tenant-app.imageRepository" (dict "svc" $svc "imageRepositories" $.Values.imageRepositories) }}:{{ include "tenant-app.imageTag" (dict "svc" $svc "imageTags" $.Values.imageTags) }}"
           imagePullPolicy: {{ $svc.image.pullPolicy }}
 {{- if $svc.command }}
           command:
@@ -124,7 +125,7 @@ spec:
 {{- end }}
 {{- end }}
           resources:
-{{ toYaml $svc.resources | indent 12 }}
+{{ include "tenant-app.resources" (dict "svc" $svc "resourceOverrides" $.Values.resourceOverrides) | indent 12 }}
 {{- if $svc.persistence }}
           volumeMounts:
 {{- range $v := $svc.persistence }}

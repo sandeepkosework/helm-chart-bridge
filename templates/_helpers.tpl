@@ -81,3 +81,44 @@ service opts out with `secrets: {<layer>: false}` in its own services[] entry.
 {{- $global := ternary .root.Values.tenantcommonSecrets.enabled .root.Values.servicecommonSecrets.enabled (eq .layer "tenantCommon") -}}
 {{- if and $global (ne (toString (get $s .layer)) "false") -}}true{{- else -}}false{{- end -}}
 {{- end }}
+{{- /*
+Per-tenant overrides. Each takes a map keyed by services[].name (see values.yaml:
+imageTags, imageRepositories, replicaOverrides, resourceOverrides) and falls back
+to the service's own value in services[] when there is no entry for it.
+*/ -}}
+{{- define "tenant-app.imageRepository" -}}
+{{- $override := get (default (dict) .imageRepositories) .svc.name -}}
+{{- toString (default .svc.image.repository $override) -}}
+{{- end }}
+{{- /* Replicas: an entry counts even when it is 0 (scale a service to zero), so this tests for the key, not for a non-empty value. */ -}}
+{{- define "tenant-app.replicas" -}}
+{{- $o := default (dict) .replicaOverrides -}}
+{{- if hasKey $o .svc.name -}}{{- int (get $o .svc.name) -}}{{- else -}}{{- .svc.replicas -}}{{- end -}}
+{{- end }}
+{{- /* Resources: the override is MERGED over the service's resources, so a tenant can change just limits.memory and keep every other value. */ -}}
+{{- define "tenant-app.resources" -}}
+{{- $o := get (default (dict) .resourceOverrides) .svc.name -}}
+{{- toYaml (mergeOverwrite (deepCopy (default (dict) .svc.resources)) (default (dict) $o)) -}}
+{{- end }}
+{{- /*
+Fails the render, with a clear message, when an override names a service that does not
+exist (a typo would otherwise be ignored silently) or has the wrong shape.
+*/ -}}
+{{- define "tenant-app.validateOverrides" -}}
+{{- $names := list -}}
+{{- range .Values.services }}{{- $names = append $names .name }}{{- end -}}
+{{- $maps := dict "imageTags" (default (dict) .Values.imageTags) "imageRepositories" (default (dict) .Values.imageRepositories) "replicaOverrides" (default (dict) .Values.replicaOverrides) "resourceOverrides" (default (dict) .Values.resourceOverrides) -}}
+{{- range $mapName, $entries := $maps -}}
+{{- range $svcName, $value := $entries -}}
+{{- if not (has $svcName $names) -}}{{- fail (printf "%s: %q is not a service in this chart (known: %s)" $mapName $svcName (join ", " $names)) -}}{{- end -}}
+{{- if eq $mapName "replicaOverrides" -}}
+{{- if or (not (or (kindIs "float64" $value) (kindIs "int" $value) (kindIs "int64" $value))) (lt (int $value) 0) -}}{{- fail (printf "replicaOverrides.%s must be a whole number, 0 or more (got %v)" $svcName $value) -}}{{- end -}}
+{{- end -}}
+{{- if eq $mapName "resourceOverrides" -}}
+{{- if not (kindIs "map" $value) -}}{{- fail (printf "resourceOverrides.%s must be a map with requests and/or limits" $svcName) -}}{{- end -}}
+{{- range $k, $unused := $value -}}{{- if not (has $k (list "requests" "limits")) -}}{{- fail (printf "resourceOverrides.%s: only requests and limits are allowed (got %q)" $svcName $k) -}}{{- end -}}{{- end -}}
+{{- end -}}
+{{- if and (or (eq $mapName "imageTags") (eq $mapName "imageRepositories")) (not (kindIs "string" $value)) (not (kindIs "invalid" $value)) -}}{{- fail (printf "%s.%s must be a string" $mapName $svcName) -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end }}

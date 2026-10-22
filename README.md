@@ -95,18 +95,43 @@ in error, the Secret is never created, and the pod stays in
 `CreateContainerConfigError`. Running pods pick up changed Vault values only
 after a restart.
 
-## Image tags
+## Per-tenant overrides: image, replicas, resources
 
-Each service's default tag is `services[].image.tag`. To pin a tag for one
-service in a tenant values file, use the `imageTags` map keyed by service
-name; it takes precedence over the default, and an empty value falls back to
-it. Only the tag can be overridden, never the repository.
+The values in `services[]` are the **defaults for every tenant**. To change something for
+**one tenant only**, put an override in *that tenant's* values file
+(`tenants/<tenant>.yaml`) and leave the chart alone. Each override is a map keyed by service
+name; a service with no entry keeps the chart's value.
 
 ```yaml
-imageTags:
+imageTags:                 # which tag a service runs
   bridge: v1.4.2
-  erep-server: v2      # the erep Pod template follows this too
+  erep-server: v2          # the erep Pod template follows this too
+imageRepositories:         # which image a service runs
+  bridge: iad.ocir.io/hbssoc/bridge-custom
+replicaOverrides:          # how many pods; 0 stops the service
+  bridge: 2
+resourceOverrides:         # cpu / memory, merged over the chart's values
+  bridge:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits:   { memory: 2Gi }
 ```
+
+- **Tag:** `imageTags` wins over `services[].image.tag`. An empty value counts as unset.
+- **Repository:** `imageRepositories` wins over `services[].image.repository`. The erep Pod
+  template follows erep-server's repository as well as its tag.
+- **Replicas:** a number, 0 or more. An entry of 0 is honoured. If autoscaling is on for the
+  service, the autoscaler decides the count and this is ignored.
+- **Resources:** merged key by key. Name only what differs: with `limits: { memory: 2Gi }`
+  every other request and limit stays as the chart has it. Only `requests` and `limits` are
+  accepted.
+- **Mistakes fail loudly.** A name that is not a service in this chart, a negative or non-numeric
+  replica count, or a resource key other than `requests` / `limits` makes the render fail with a
+  message naming the entry, instead of being ignored.
+- **These need chart v0.1.1 or later** for `imageRepositories`, `replicaOverrides` and
+  `resourceOverrides`. `imageTags` works on earlier releases. A tenant still on an older release
+  ignores the newer keys.
+- The tenant-operator keeps these four blocks when it rewrites a tenant's file, so an override
+  survives later updates of that tenant.
 
 ## Autoscaling
 
