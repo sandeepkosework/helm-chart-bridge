@@ -232,46 +232,23 @@ persistence:
 # `enabled: true` in the services[] entry above -- disabledServices always
 # wins over a service's own enabled flag, never the other way around.
 disabledServices: []
-# Per-service image tag overrides, keyed by services[].name -- e.g.
-#   imageTags:
-#     bridge: v1.4.2
-#     qraie-ui: stg-hbssv-20261007
+# Per-tenant image and resources, keyed by services[].name. services[] above holds the
+# defaults for every tenant; put this in ONE tenant's values file (tenants/<tenant>.yaml,
+# which the tenant-operator fills in) to change that tenant only:
 #
-# Precedence (highest wins):
-#   1. imageTags.<service-name>   -- if set and non-empty, this tag is used
-#   2. services[].image.tag       -- the service's own default below
-# So `image.tag` in services[] is only a default; an imageTags entry always
-# overrides it. An empty ("") or null entry counts as unset and falls back
-# to the default. The repository has its own map, imageRepositories, below.
+#   serviceConfig:
+#     bridge:
+#       image: {repository: gitea.example/gitadmin/bridge, tag: v1.4.2}
+#       resources:
+#         requests: {cpu: 250m, memory: 256Mi}
+#         limits:   {cpu: "1", memory: 2Gi}
 #
-# This is a map (not a services[] edit) so a tenant values file can pin one
-# service's tag without Helm replacing the whole services list. The erep
-# Pod template (templates/erep-pod-configmap.yaml) follows erep-server's
-# effective tag too.
-imageTags: {}
-# Per-tenant overrides for one tenant -- put these in that tenant's values file
-# (tenants/<tenant>.yaml), never in this chart, and only that tenant changes. Each
-# map is keyed by services[].name; a name that is not a service in this chart, or
-# a value of the wrong shape, fails the render with a message saying which.
-#
-# imageRepositories -- use another image for a service (the tag still comes from
-#   imageTags or the service's own default):
-#     imageRepositories:
-#       bridge: iad.ocir.io/hbssoc/bridge-custom
-#   The erep Pod template follows erep-server's repository too.
-imageRepositories: {}
-# replicaOverrides -- how many pods a service runs. 0 is allowed (stops the service):
-#     replicaOverrides:
-#       bridge: 2
-replicaOverrides: {}
-# resourceOverrides -- cpu / memory for a service, MERGED over its resources in
-# services[]: name only the values that differ and the rest stay as they are.
-# Only requests and limits are allowed.
-#     resourceOverrides:
-#       bridge:
-#         requests: { cpu: 250m, memory: 256Mi }
-#         limits:   { memory: 2Gi }
-resourceOverrides: {}
+# What is given replaces the same value in services[]; what is not given stays as in
+# services[]. Resources are merged key by key, so naming only limits.memory keeps every other
+# request and limit. An empty tag or repository counts as unset. The erep Pod template follows
+# erep-server's entry. A name that is not a service in this chart, or a value of the wrong
+# shape, fails the render with a message saying which.
+serviceConfig: {}
 # Where services get their listen port (see each service's `portEnv`).
 #
 #   chart   (default)  Each name in a service's `portEnv` is set to that

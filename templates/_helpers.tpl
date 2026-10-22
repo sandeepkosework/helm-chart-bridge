@@ -40,16 +40,6 @@ true
 {{- end -}}
 {{- end }}
 {{- /*
-Effective image tag for a services[] entry. Takes a dict with "svc" (the list
-element) and "imageTags" (the chart-level map). A tenant overrides one
-service's tag with `imageTags: {<service-name>: <tag>}` -- a map, so Helm
-deep-merges it and the tenant never has to repeat the services[] list.
-*/ -}}
-{{- define "tenant-app.imageTag" -}}
-{{- $override := get (default (dict) .imageTags) .svc.name -}}
-{{- toString (default .svc.image.tag $override) -}}
-{{- end }}
-{{- /*
 Vault path with placeholders resolved. Takes a dict with "path", "root" (the
 top-level context, for tenant.id) and optionally "service".
 */ -}}
@@ -82,43 +72,51 @@ service opts out with `secrets: {<layer>: false}` in its own services[] entry.
 {{- if and $global (ne (toString (get $s .layer)) "false") -}}true{{- else -}}false{{- end -}}
 {{- end }}
 {{- /*
-Per-tenant overrides. Each takes a map keyed by services[].name (see values.yaml:
-imageTags, imageRepositories, replicaOverrides, resourceOverrides) and falls back
-to the service's own value in services[] when there is no entry for it.
+Per-tenant service settings. A tenant's values file may carry
+  serviceConfig:
+    <service-name>:
+      image: {repository: ..., tag: ...}
+      resources: {requests: {...}, limits: {...}}
+Whatever is given here is used instead of the same value in services[]; anything not given
+falls back to services[]. Resources are merged key by key, so naming only limits.memory keeps
+every other request and limit.
 */ -}}
-{{- define "tenant-app.imageRepository" -}}
-{{- $override := get (default (dict) .imageRepositories) .svc.name -}}
-{{- toString (default .svc.image.repository $override) -}}
+{{- define "tenant-app.image" -}}
+{{- $c := default (dict) (get (default (dict) .serviceConfig) .svc.name) -}}
+{{- $img := default (dict) (get $c "image") -}}
+{{- printf "%s:%s" (toString (default .svc.image.repository (get $img "repository"))) (toString (default .svc.image.tag (get $img "tag"))) -}}
 {{- end }}
-{{- /* Replicas: an entry counts even when it is 0 (scale a service to zero), so this tests for the key, not for a non-empty value. */ -}}
-{{- define "tenant-app.replicas" -}}
-{{- $o := default (dict) .replicaOverrides -}}
-{{- if hasKey $o .svc.name -}}{{- int (get $o .svc.name) -}}{{- else -}}{{- .svc.replicas -}}{{- end -}}
-{{- end }}
-{{- /* Resources: the override is MERGED over the service's resources, so a tenant can change just limits.memory and keep every other value. */ -}}
 {{- define "tenant-app.resources" -}}
-{{- $o := get (default (dict) .resourceOverrides) .svc.name -}}
-{{- toYaml (mergeOverwrite (deepCopy (default (dict) .svc.resources)) (default (dict) $o)) -}}
+{{- $c := default (dict) (get (default (dict) .serviceConfig) .svc.name) -}}
+{{- toYaml (mergeOverwrite (deepCopy (default (dict) .svc.resources)) (default (dict) (get $c "resources"))) -}}
 {{- end }}
 {{- /*
-Fails the render, with a clear message, when an override names a service that does not
-exist (a typo would otherwise be ignored silently) or has the wrong shape.
+Fails the render, with a message naming the entry, when serviceConfig names a service that does
+not exist (a typo would otherwise be ignored silently) or has the wrong shape.
 */ -}}
-{{- define "tenant-app.validateOverrides" -}}
+{{- define "tenant-app.validateServiceConfig" -}}
 {{- $names := list -}}
 {{- range .Values.services }}{{- $names = append $names .name }}{{- end -}}
-{{- $maps := dict "imageTags" (default (dict) .Values.imageTags) "imageRepositories" (default (dict) .Values.imageRepositories) "replicaOverrides" (default (dict) .Values.replicaOverrides) "resourceOverrides" (default (dict) .Values.resourceOverrides) -}}
-{{- range $mapName, $entries := $maps -}}
-{{- range $svcName, $value := $entries -}}
-{{- if not (has $svcName $names) -}}{{- fail (printf "%s: %q is not a service in this chart (known: %s)" $mapName $svcName (join ", " $names)) -}}{{- end -}}
-{{- if eq $mapName "replicaOverrides" -}}
-{{- if or (not (or (kindIs "float64" $value) (kindIs "int" $value) (kindIs "int64" $value))) (lt (int $value) 0) -}}{{- fail (printf "replicaOverrides.%s must be a whole number, 0 or more (got %v)" $svcName $value) -}}{{- end -}}
+{{- range $svcName, $c := (default (dict) .Values.serviceConfig) -}}
+{{- if not (has $svcName $names) -}}{{- fail (printf "serviceConfig: %q is not a service in this chart (known: %s)" $svcName (join ", " $names)) -}}{{- end -}}
+{{- if not (kindIs "map" $c) -}}{{- fail (printf "serviceConfig.%s must be a map with image and/or resources" $svcName) -}}{{- end -}}
+{{- range $k, $unused := $c -}}{{- if not (has $k (list "image" "resources")) -}}{{- fail (printf "serviceConfig.%s: only image and resources are allowed (got %q)" $svcName $k) -}}{{- end -}}{{- end -}}
+{{- if hasKey $c "image" -}}
+{{- $img := get $c "image" -}}
+{{- if not (kindIs "map" $img) -}}{{- fail (printf "serviceConfig.%s.image must be a map with repository and/or tag" $svcName) -}}{{- end -}}
+{{- range $k, $v := $img -}}
+{{- if not (has $k (list "repository" "tag")) -}}{{- fail (printf "serviceConfig.%s.image: only repository and tag are allowed (got %q)" $svcName $k) -}}{{- end -}}
+{{- if and (eq $k "repository") (not (kindIs "string" $v)) -}}{{- fail (printf "serviceConfig.%s.image.repository must be a string" $svcName) -}}{{- end -}}
+{{- if and (eq $k "tag") (not (or (kindIs "string" $v) (kindIs "int" $v) (kindIs "int64" $v) (kindIs "float64" $v))) -}}{{- fail (printf "serviceConfig.%s.image.tag must be a string or number" $svcName) -}}{{- end -}}
 {{- end -}}
-{{- if eq $mapName "resourceOverrides" -}}
-{{- if not (kindIs "map" $value) -}}{{- fail (printf "resourceOverrides.%s must be a map with requests and/or limits" $svcName) -}}{{- end -}}
-{{- range $k, $unused := $value -}}{{- if not (has $k (list "requests" "limits")) -}}{{- fail (printf "resourceOverrides.%s: only requests and limits are allowed (got %q)" $svcName $k) -}}{{- end -}}{{- end -}}
 {{- end -}}
-{{- if and (or (eq $mapName "imageTags") (eq $mapName "imageRepositories")) (not (kindIs "string" $value)) (not (kindIs "invalid" $value)) -}}{{- fail (printf "%s.%s must be a string" $mapName $svcName) -}}{{- end -}}
+{{- if hasKey $c "resources" -}}
+{{- $res := get $c "resources" -}}
+{{- if not (kindIs "map" $res) -}}{{- fail (printf "serviceConfig.%s.resources must be a map with requests and/or limits" $svcName) -}}{{- end -}}
+{{- range $k, $v := $res -}}
+{{- if not (has $k (list "requests" "limits")) -}}{{- fail (printf "serviceConfig.%s.resources: only requests and limits are allowed (got %q)" $svcName $k) -}}{{- end -}}
+{{- if not (kindIs "map" $v) -}}{{- fail (printf "serviceConfig.%s.resources.%s must be a map" $svcName $k) -}}{{- end -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end }}
