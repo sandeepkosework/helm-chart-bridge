@@ -53,7 +53,7 @@ data:
       {{- end }}
       containers:
         - name: erep
-          image: "{{ include "tenant-app.imageRepository" (dict "svc" $erep "imageRepositories" .Values.imageRepositories) }}:{{ include "tenant-app.imageTag" (dict "svc" $erep "imageTags" .Values.imageTags) }}"
+          image: "{{ include "tenant-app.image" (dict "svc" $erep "serviceConfig" .Values.serviceConfig) }}"
           env:
             {{- range $key, $value := $erep.env }}
             - name: {{ $key }}
