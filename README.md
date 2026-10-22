@@ -95,43 +95,39 @@ in error, the Secret is never created, and the pod stays in
 `CreateContainerConfigError`. Running pods pick up changed Vault values only
 after a restart.
 
-## Per-tenant overrides: image, replicas, resources
+## Per-tenant image and resources
 
-The values in `services[]` are the **defaults for every tenant**. To change something for
-**one tenant only**, put an override in *that tenant's* values file
-(`tenants/<tenant>.yaml`) and leave the chart alone. Each override is a map keyed by service
-name; a service with no entry keeps the chart's value.
+The values in `services[]` are the **defaults for every tenant**. Each tenant's values file
+(`tenants/<tenant>.yaml`) carries a `serviceConfig` section with the image and resources that
+tenant runs, one entry per service. Change a value there and only that tenant changes; leave
+the chart alone.
 
 ```yaml
-imageTags:                 # which tag a service runs
-  bridge: v1.4.2
-  erep-server: v2          # the erep Pod template follows this too
-imageRepositories:         # which image a service runs
-  bridge: iad.ocir.io/hbssoc/bridge-custom
-replicaOverrides:          # how many pods; 0 stops the service
-  bridge: 2
-resourceOverrides:         # cpu / memory, merged over the chart's values
+serviceConfig:
   bridge:
-    requests: { cpu: 250m, memory: 256Mi }
-    limits:   { memory: 2Gi }
+    image:
+      repository: gitea.example/gitadmin/bridge
+      tag: v1.4.2
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits:   { cpu: "1", memory: 2Gi }
+  erep-server:             # the erep Pod template follows this entry too
+    image: { tag: v2 }
 ```
 
-- **Tag:** `imageTags` wins over `services[].image.tag`. An empty value counts as unset.
-- **Repository:** `imageRepositories` wins over `services[].image.repository`. The erep Pod
-  template follows erep-server's repository as well as its tag.
-- **Replicas:** a number, 0 or more. An entry of 0 is honoured. If autoscaling is on for the
-  service, the autoscaler decides the count and this is ignored.
-- **Resources:** merged key by key. Name only what differs: with `limits: { memory: 2Gi }`
-  every other request and limit stays as the chart has it. Only `requests` and `limits` are
-  accepted.
-- **Mistakes fail loudly.** A name that is not a service in this chart, a negative or non-numeric
-  replica count, or a resource key other than `requests` / `limits` makes the render fail with a
-  message naming the entry, instead of being ignored.
-- **These need chart v0.1.1 or later** for `imageRepositories`, `replicaOverrides` and
-  `resourceOverrides`. `imageTags` works on earlier releases. A tenant still on an older release
-  ignores the newer keys.
-- The tenant-operator keeps these four blocks when it rewrites a tenant's file, so an override
-  survives later updates of that tenant.
+- **What is used:** a value given in `serviceConfig` replaces the same value in `services[]`. A
+  value that is not given stays as the chart has it. An empty tag or repository counts as unset.
+- **Quote tags that look like numbers:** write `tag: '1.10'`, not `tag: 1.10`, which YAML reads as 1.1.
+- **Resources** are merged key by key: with only `limits: { memory: 2Gi }` every other request
+  and limit stays as the chart has it. Only `requests` and `limits` are accepted.
+- **Mistakes fail loudly.** A name that is not a service in this chart, a key other than
+  `image` / `resources`, or a value of the wrong shape makes the render fail with a message
+  naming the entry, instead of being ignored.
+- **Release:** `serviceConfig` needs chart v0.1.2 or later; an older release ignores it.
+- The tenant-operator writes this section when it creates the tenant, with the chart's own values
+  for every enabled service, and keeps your edits when it rewrites the file. When a tenant is moved
+  to a newer chart release it refreshes the values you have not changed and keeps the ones you have.
+- Replica counts are not part of `serviceConfig`; they come from `services[]`.
 
 ## Autoscaling
 
