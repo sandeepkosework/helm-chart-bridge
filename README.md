@@ -235,7 +235,7 @@ Setting it back to `false` (or removing it) starts the services again as they we
 the key (`POST /tenant/{id}/archive` and `/restore`); it is a plain value, so you can also set it by
 hand. A release older than the one that introduced it ignores the key, so the operator refuses to archive
 a tenant pinned to one. Pods that something other than this chart created (for example the ereps
-erep-server starts) are not scaled down by it; the operator removes those when it archives.
+erep-server starts) are not touched by it and keep running.
 
 ## Health checks
 
