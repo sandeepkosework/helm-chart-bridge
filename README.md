@@ -223,6 +223,20 @@ service without `portEnv` is never touched. `portEnv` is not set on
 `iot-broker-admin`, `iot-broker-web`, `microservice-qraie`, the redis services
 or `radicale`.
 
+## Archiving a tenant
+
+`archived: true` in a tenant's values file stops the tenant without deleting anything:
+
+- every service runs zero replicas (`replicas: 0`);
+- the autoscalers and the ingress are not rendered;
+- the namespace, PVCs, ExternalSecrets/Vault secrets and Services stay, and so do the tenant's databases.
+
+Setting it back to `false` (or removing it) starts the services again as they were. The operator writes
+the key (`POST /tenant/{id}/archive` and `/restore`); it is a plain value, so you can also set it by
+hand. A release older than the one that introduced it ignores the key, so the operator refuses to archive
+a tenant pinned to one. Pods that something other than this chart created (for example the ereps
+erep-server starts) are not touched by it and keep running.
+
 ## Health checks
 
 A service can declare `probes:` in its `services[]` entry, with raw Kubernetes

@@ -13,7 +13,7 @@ metadata:
   labels:
     {{- include "tenant-app.labels" $ | nindent 4 }}
 spec:
-  replicas: {{ $svc.replicas }}
+  replicas: {{ if $.Values.archived }}0{{ else }}{{ $svc.replicas }}{{ end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "tenant-app.name" $ }}
