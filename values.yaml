@@ -1627,6 +1627,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /prism-ui
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1664,6 +1673,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /prism/api
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1709,6 +1727,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /prism-scanner
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1746,6 +1773,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /voxflow
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
