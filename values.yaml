@@ -27,7 +27,9 @@ imagePullSecrets:
 # they follow each tenant's own tenant.* values. A service overrides a key by
 # setting it in its own plainEnv. Passwords and keys do NOT belong here.
 commonEnv:
-  TENANT_ID: "{{ .Values.tenant.id | upper }}"
+  # The bare tenant name (tenant.name), not the slug (tenant.id): it names the
+  # tenant's Mongo database (<tenant.name>-bridge), as the operator's seed Job does.
+  TENANT_ID: "{{ .Values.tenant.name }}"
   VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
 # Pod-level security context for every service's pods. fsGroup makes mounted
 # volumes group-writable for the container's process: PersistentVolumes are
@@ -1533,6 +1535,11 @@ services:
       REDIS_PORT:
         service: qraie-redis-shared
         field: port
+      # enrollment-api also uses qraie-redis (not the shared Redis), by full URL.
+      REDIS_URL:
+        service: qraie-redis
+        field: url
+        scheme: redis
     resources:
       requests:
         cpu: 100m
@@ -1625,6 +1632,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /prism-ui
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1662,6 +1678,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /prism/api
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1707,6 +1732,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /prism-scanner
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1744,6 +1778,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /voxflow
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m

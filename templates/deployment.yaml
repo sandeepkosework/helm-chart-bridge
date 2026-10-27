@@ -98,7 +98,7 @@ spec:
             # its in-cluster Service name / first port. Set in `env`, which
             # takes precedence over the envFrom secrets above.
             - name: {{ $key }}
-              value: {{ if eq $ref.field "host" }}{{ printf "%s-%s" (include "tenant-app.slug" $) $target.name | quote }}{{ else if eq $ref.field "port" }}{{ (index $target.ports 0).containerPort | toString | quote }}{{ else }}{{ fail (printf "service %q: serviceRefEnv.%s field must be host or port" $name $key) }}{{ end }}
+              value: {{ if eq $ref.field "host" }}{{ printf "%s-%s" (include "tenant-app.slug" $) $target.name | quote }}{{ else if eq $ref.field "port" }}{{ (index $target.ports 0).containerPort | toString | quote }}{{ else if eq $ref.field "url" }}{{ printf "%s://%s-%s:%d" (default "http" $ref.scheme) (include "tenant-app.slug" $) $target.name (int (index $target.ports 0).containerPort) | quote }}{{ else }}{{ fail (printf "service %q: serviceRefEnv.%s field must be host, port or url" $name $key) }}{{ end }}
 {{- end }}
 {{- range $key, $value := $svc.plainEnv }}
             # Reference example: a non-secret value sourced directly from
