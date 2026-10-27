@@ -79,16 +79,15 @@ spec:
             - secretRef:
                 name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" $name) }}
 {{- end }}
-{{- if or (and $ownSecret (not (hasKey $svc.env "TENANT_ID"))) $svc.plainEnv $svc.serviceRefEnv $portEnv }}
           env:
-{{- if and $ownSecret (not (hasKey $svc.env "TENANT_ID")) }}
-            # Reference example: an explicit secretKeyRef for one key,
-            # rather than pulling in the whole secret via envFrom above.
-            - name: TENANT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "tenant-app.serviceSecretName" (dict "root" $ "service" $name) }}
-                  key: TENANT_ID
+{{- range $key, $value := $.Values.commonEnv }}
+{{- if not (or (hasKey (default (dict) $svc.env) $key) (hasKey (default (dict) $svc.plainEnv) $key)) }}
+            # From the top-level commonEnv in values.yaml, same for every
+            # service. A service overrides it by setting the key in its own
+            # plainEnv.
+            - name: {{ $key }}
+              value: {{ tpl (toString $value) $ | quote }}
+{{- end }}
 {{- end }}
 {{- range $key, $ref := $svc.serviceRefEnv }}
 {{- $target := dict }}
@@ -115,7 +114,6 @@ spec:
             # the envFrom secrets.
             - name: {{ $key }}
               value: {{ (index $svc.ports 0).containerPort | toString | quote }}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- range $probeKey := list "startupProbe" "readinessProbe" "livenessProbe" }}

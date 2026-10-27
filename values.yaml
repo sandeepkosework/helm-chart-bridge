@@ -22,6 +22,13 @@ hostAliasIp: "192.168.85.207"
 archived: false
 imagePullSecrets:
 - ocir-registry
+# Env vars added to EVERY service's container, visible here instead of in
+# Vault. Values may use Helm templates (e.g. {{ .Values.tenant.id }}), so
+# they follow each tenant's own tenant.* values. A service overrides a key by
+# setting it in its own plainEnv. Passwords and keys do NOT belong here.
+commonEnv:
+  TENANT_ID: "{{ .Values.tenant.id | upper }}"
+  VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
 # Pod-level security context for every service's pods. fsGroup makes mounted
 # volumes group-writable for the container's process: PersistentVolumes are
 # created root-owned, so an app that runs as a non-root user (e.g. `USER node`)
@@ -166,17 +173,11 @@ persistence:
     size: 5Gi
     accessModes:
     - ReadWriteOnce        
-  redis-data:
-    enabled: true
-    size: 5Gi
-    accessModes:
-    - ReadWriteOnce
-  # Dedicated PVCs for qraie-redis-shared/qraie-redis -- deliberately NOT
-  # reusing redis-data above, which already belongs to
-  # bridge-cp-conductor-redis: two separate Deployments (separate pods)
-  # both claiming the same PVC name would fight over one ReadWriteOnce
-  # volume, unlike the same PVC being mounted twice within ONE pod (which
-  # templates/deployment.yaml already dedupes safely).
+  # Dedicated PVCs for qraie-redis-shared/qraie-redis, separate from
+  # bridge-cp-redis-data (bridge-cp-conductor-redis): two separate
+  # Deployments (separate pods) both claiming the same PVC name would fight
+  # over one ReadWriteOnce volume, unlike the same PVC being mounted twice
+  # within ONE pod (which templates/deployment.yaml already dedupes safely).
   qraie-redis-shared-data:
     enabled: true
     size: 5Gi
@@ -550,6 +551,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -590,6 +600,15 @@ services:
     - API_PORT
     ingressPath: /controlops/api/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -628,6 +647,15 @@ services:
     - API_PORT
     ingressPath: /galaxy/erepapi/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -683,6 +711,15 @@ services:
     - API_PORT
     ingressPath: /workplace/api/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -727,6 +764,15 @@ services:
     - containerPort: 4000
     env: {}
     ingressPath: null
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -773,6 +819,15 @@ services:
     - API_PORT
     ingressPath: /workplace/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -808,6 +863,15 @@ services:
     - API_PORT
     ingressPath: /workplace/admin-portal/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -851,6 +915,15 @@ services:
       SERVER_HOST: 0.0.0.0
     ingressPath: /organization/wfm/api/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -886,6 +959,15 @@ services:
     - API_PORT
     ingressPath: /organization/wfm/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -921,6 +1003,15 @@ services:
     portEnv:
     - SERVER_PORT
     ingressPath: null
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -974,6 +1065,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: null
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1009,6 +1109,15 @@ services:
     - API_PORT
     ingressPath: /galaxy/slmapi/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1043,6 +1152,15 @@ services:
     - VIRTUAL_PORT
     - API_PORT
     ingressPath: /tranops
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1082,6 +1200,15 @@ services:
     - API_PORT
     ingressPath: /tranops/api
     ingressRewriteTo: "/api"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1120,6 +1247,15 @@ services:
     - API_PORT
     ingressPath: /iot-broker/api/data/
     ingressRewriteTo: "/api/data/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1158,6 +1294,15 @@ services:
     - API_PORT
     ingressPath: /iot-broker/api/config/
     ingressRewriteTo: "/api/config/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1196,6 +1341,15 @@ services:
     - API_PORT
     ingressPath: /iot-broker/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1230,6 +1384,15 @@ services:
     env: {}
     ingressPath: /iot-broker/admin/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1263,6 +1426,15 @@ services:
     - containerPort: 80
     env: {}
     ingressPath: null
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1352,6 +1524,15 @@ services:
     - API_PORT
     ingressPath: /enrollment/
     ingressRewriteTo: "/"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1398,6 +1579,15 @@ services:
     - API_PORT
     ingressPath: /acl_server/api
     ingressRewriteTo: "/api"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
@@ -1604,6 +1794,15 @@ services:
     - API_PORT
     ingressPath: /scheduler-agent/api
     ingressRewriteTo: "/api"
+    # Shared Redis (qraie-redis-shared): host and port come from the chart,
+    # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
+    serviceRefEnv:
+      REDIS_HOST:
+        service: qraie-redis-shared
+        field: host
+      REDIS_PORT:
+        service: qraie-redis-shared
+        field: port
     resources:
       requests:
         cpu: 100m
