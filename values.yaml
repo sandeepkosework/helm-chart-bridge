@@ -1535,6 +1535,11 @@ services:
       REDIS_PORT:
         service: qraie-redis-shared
         field: port
+      # enrollment-api also uses qraie-redis (not the shared Redis), by full URL.
+      REDIS_URL:
+        service: qraie-redis
+        field: url
+        scheme: redis
     resources:
       requests:
         cpu: 100m
