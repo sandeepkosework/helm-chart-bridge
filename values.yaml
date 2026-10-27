@@ -27,7 +27,9 @@ imagePullSecrets:
 # they follow each tenant's own tenant.* values. A service overrides a key by
 # setting it in its own plainEnv. Passwords and keys do NOT belong here.
 commonEnv:
-  TENANT_ID: "{{ .Values.tenant.id | upper }}"
+  # The bare tenant name (tenant.name), not the slug (tenant.id): it names the
+  # tenant's Mongo database (<tenant.name>-bridge), as the operator's seed Job does.
+  TENANT_ID: "{{ .Values.tenant.name }}"
   VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
 # Pod-level security context for every service's pods. fsGroup makes mounted
 # volumes group-writable for the container's process: PersistentVolumes are
