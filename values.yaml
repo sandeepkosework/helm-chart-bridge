@@ -26,6 +26,7 @@ imagePullSecrets:
 # Vault. Values may use Helm templates (e.g. {{ .Values.tenant.id }}), so
 # they follow each tenant's own tenant.* values. A service overrides a key by
 # setting it in its own plainEnv. Passwords and keys do NOT belong here.
+# A service leaves a commonEnv key out with `omitCommonEnv: [KEY]` on its entry below.
 commonEnv:
   # The bare tenant name (tenant.name), not the slug (tenant.id): it names the
   # tenant's Mongo database (<tenant.name>-bridge), as the operator's seed Job does.
@@ -988,6 +989,8 @@ services:
     
   - name: wfm-microservice
     enabled: true
+    # Reads TENANT_IDS (in its Vault secret), not TENANT_ID.
+    omitCommonEnv: [TENANT_ID]
     # Which secret layers this service receives via envFrom (see the
     # secrets section at the top). Each is on unless set to false here.
     secrets:
