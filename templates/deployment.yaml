@@ -103,8 +103,9 @@ spec:
 {{- range $key, $value := $svc.plainEnv }}
             # Reference example: a non-secret value sourced directly from
             # this chart's values.yaml. Only for values that aren't sensitive.
+            # May use template expressions (rendered with tpl, like commonEnv).
             - name: {{ $key }}
-              value: {{ $value | quote }}
+              value: {{ tpl (toString $value) $ | quote }}
 {{- end }}
 {{- range $key := $portEnv }}
 {{- if not (hasKey (default (dict) $svc.plainEnv) $key) }}

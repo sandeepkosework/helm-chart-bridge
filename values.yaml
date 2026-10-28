@@ -25,12 +25,12 @@ imagePullSecrets:
 # Env vars added to EVERY service's container, visible here instead of in
 # Vault. Values may use Helm templates (e.g. {{ .Values.tenant.id }}), so
 # they follow each tenant's own tenant.* values. A service overrides a key by
-# setting it in its own plainEnv. Passwords and keys do NOT belong here.
-# A service leaves a commonEnv key out with `omitCommonEnv: [KEY]` on its entry below.
+# setting it in its own plainEnv, or leaves one out with `omitCommonEnv: [KEY]`.
+# Passwords and keys do NOT belong here.
 commonEnv:
-  # The bare tenant name (tenant.name), not the slug (tenant.id), upper-cased
-  # (the legacy convention, "HBSS-031"; the seed stores tenantObj.tenantId the same way).
-  TENANT_ID: "{{ .Values.tenant.name | upper }}"
+  # The bare tenant name (tenant.name), not the slug (tenant.id): it names the
+  # tenant's Mongo database (<tenant.name>-bridge), as the operator's seed Job does.
+  TENANT_ID: "{{ .Values.tenant.name }}"
   VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
 # Pod-level security context for every service's pods. fsGroup makes mounted
 # volumes group-writable for the container's process: PersistentVolumes are
@@ -989,7 +989,8 @@ services:
     
   - name: wfm-microservice
     enabled: true
-    # Reads TENANT_IDS (in its Vault secret), not TENANT_ID.
+    # Reads TENANT_IDS, not TENANT_ID: leave the common TENANT_ID out and set
+    # TENANT_IDS to the same tenant name instead.
     omitCommonEnv: [TENANT_ID]
     # Which secret layers this service receives via envFrom (see the
     # secrets section at the top). Each is on unless set to false here.
@@ -1017,6 +1018,8 @@ services:
       REDIS_PORT:
         service: qraie-redis-shared
         field: port
+    plainEnv:
+      TENANT_IDS: "{{ .Values.tenant.name }}"
     resources:
       requests:
         cpu: 100m
