@@ -28,9 +28,9 @@ imagePullSecrets:
 # setting it in its own plainEnv. Passwords and keys do NOT belong here.
 # A service leaves a commonEnv key out with `omitCommonEnv: [KEY]` on its entry below.
 commonEnv:
-  # The bare tenant name (tenant.name), not the slug (tenant.id): it names the
-  # tenant's Mongo database (<tenant.name>-bridge), as the operator's seed Job does.
-  TENANT_ID: "{{ .Values.tenant.name }}"
+  # The bare tenant name (tenant.name), not the slug (tenant.id), upper-cased
+  # (the legacy convention, "HBSS-031"; the seed stores tenantObj.tenantId the same way).
+  TENANT_ID: "{{ .Values.tenant.name | upper }}"
   VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
 # Pod-level security context for every service's pods. fsGroup makes mounted
 # volumes group-writable for the container's process: PersistentVolumes are
