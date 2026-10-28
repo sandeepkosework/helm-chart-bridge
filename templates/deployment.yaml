@@ -81,10 +81,10 @@ spec:
 {{- end }}
           env:
 {{- range $key, $value := $.Values.commonEnv }}
-{{- if not (or (hasKey (default (dict) $svc.env) $key) (hasKey (default (dict) $svc.plainEnv) $key)) }}
+{{- if not (or (hasKey (default (dict) $svc.env) $key) (hasKey (default (dict) $svc.plainEnv) $key) (has $key (default (list) $svc.omitCommonEnv))) }}
             # From the top-level commonEnv in values.yaml, same for every
             # service. A service overrides it by setting the key in its own
-            # plainEnv.
+            # plainEnv, or leaves it out by listing it in omitCommonEnv.
             - name: {{ $key }}
               value: {{ tpl (toString $value) $ | quote }}
 {{- end }}
