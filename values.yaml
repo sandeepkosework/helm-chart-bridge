@@ -410,7 +410,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/bridge-cp-conductor
       tag: 'latest'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 8461
@@ -539,7 +539,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/acetaxi-bridge
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16004
@@ -594,7 +594,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/controlops_server
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16006
@@ -639,7 +639,9 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/erep-server
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      # Always: 'stg' is a mutable tag that is re-pushed, so a node that already
+      # cached an older build would otherwise keep running it.
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16008
@@ -676,6 +678,13 @@ services:
       name: erep-generated
       mountPath: /app/generated-ereps
       readOnly: false
+    # Same PVC at a second path: erep-server creates /generated-ereps at boot and
+    # crashes (EACCES) if it can't write there. The volume is declared once and
+    # mounted at both paths.
+    - type: pvc
+      name: erep-generated
+      mountPath: /generated-ereps
+      readOnly: false
     - type: pvc
       name: erep-logs
       mountPath: /app/logs
@@ -703,7 +712,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/qraie-api-gateway-v4-stg
       tag: 'stg-hbssv'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16010
@@ -759,7 +768,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/qraiebot-microservice-v4-stg
       tag: 'stg-hbssv'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     # The app listens on 4000 (its MS_PORT in bridgeMetaInfo), not 80; there is
     # no portEnv here, so the chart cannot change it.
@@ -811,7 +820,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/qraie-ui-hbss-v4-stg
       tag: 'stg-hbssv'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 30180
@@ -855,7 +864,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/qraie-admin-panel
       tag: 'bridge'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 30182
@@ -902,7 +911,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/fabreq_gateway
       tag: 'wfm-amrtr'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16018
@@ -951,7 +960,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/wfm-ui
       tag: 'wfm-acetaxi'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 30188
@@ -1001,7 +1010,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/fabreq-microservice
       tag: 'wfm-amrtr'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 9001
@@ -1044,7 +1053,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/mcp_server
       tag: 'stg-acetaxi'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 10011
@@ -1106,7 +1115,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/mcp_client
       tag: 'stg-acetaxi'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 30192
@@ -1150,7 +1159,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/tranops-ui
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 30194
@@ -1196,7 +1205,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/tranops-backend
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16030
@@ -1244,7 +1253,7 @@ services:
     image:
       repository: nginx
       tag: 'latest'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 3001
@@ -1291,7 +1300,7 @@ services:
     image:
       repository: nginx
       tag: 'latest'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 3002
@@ -1338,7 +1347,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/iot-broker-broker-service
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 3003
@@ -1385,7 +1394,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/iot-broker-admin-panel
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 80
@@ -1428,7 +1437,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/iot-broker-web-portal
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 80
@@ -1470,7 +1479,7 @@ services:
     image:
       repository: nginx
       tag: 'latest'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 3040
@@ -1507,7 +1516,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/iot-vlm
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 3003
@@ -1581,7 +1590,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/acl-server
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 28077
@@ -1628,7 +1637,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/prism-ui
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 28080
@@ -1674,7 +1683,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/prism-backend
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 28078
@@ -1728,7 +1737,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/prism-scanner
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 28079
@@ -1774,7 +1783,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/voxflow
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 30524
@@ -1832,7 +1841,7 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/schedular-agent
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 4200
@@ -1883,7 +1892,7 @@ services:
     image:
       repository: tomsquest/docker-radicale
       tag: '3.3.3.0'
-      pullPolicy: IfNotPresent
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 5232
