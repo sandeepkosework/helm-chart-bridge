@@ -639,7 +639,9 @@ services:
     image:
       repository: iad.ocir.io/hbssoc/erep-server
       tag: 'stg'
-      pullPolicy: IfNotPresent
+      # Always: 'stg' is a mutable tag that is re-pushed, so a node that already
+      # cached an older build would otherwise keep running it.
+      pullPolicy: Always
     replicas: 1
     ports:
     - containerPort: 16008
@@ -675,6 +677,13 @@ services:
     - type: pvc
       name: erep-generated
       mountPath: /app/generated-ereps
+      readOnly: false
+    # Same PVC at a second path: erep-server creates /generated-ereps at boot and
+    # crashes (EACCES) if it can't write there. The volume is declared once and
+    # mounted at both paths.
+    - type: pvc
+      name: erep-generated
+      mountPath: /generated-ereps
       readOnly: false
     - type: pvc
       name: erep-logs

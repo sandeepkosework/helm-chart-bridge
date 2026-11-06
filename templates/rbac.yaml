@@ -16,6 +16,14 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "watch", "list", "delete", "create"]
+  # erep-server (USE_KUBERNETES=true) runs each eRep as a Pod plus a Service, and
+  # reads an eRep's logs with `kubectl logs` on its newest Pod.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
