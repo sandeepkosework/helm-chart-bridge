@@ -95,11 +95,11 @@ in error, the Secret is never created, and the pod stays in
 `CreateContainerConfigError`. Running pods pick up changed Vault values only
 after a restart.
 
-## Per-tenant image and resources
+## Per-tenant service settings
 
 The values in `services[]` are the **defaults for every tenant**. Each tenant's values file
-(`tenants/<tenant>.yaml`) carries a `serviceConfig` section with the image and resources that
-tenant runs, one entry per service. Change a value there and only that tenant changes; leave
+(`tenants/<tenant>.yaml`) carries a `serviceConfig` section with the settings that
+tenant runs with, one entry per service. Change a value there and only that tenant changes; leave
 the chart alone.
 
 ```yaml
@@ -111,6 +111,8 @@ serviceConfig:
     resources:
       requests: { cpu: 250m, memory: 256Mi }
       limits:   { cpu: "1", memory: 2Gi }
+    replicas: 2
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 65 }
   erep-server:             # the erep Pod template follows this entry too
     image: { tag: v2 }
 ```
@@ -120,14 +122,26 @@ serviceConfig:
 - **Quote tags that look like numbers:** write `tag: '1.10'`, not `tag: 1.10`, which YAML reads as 1.1.
 - **Resources** are merged key by key: with only `limits: { memory: 2Gi }` every other request
   and limit stays as the chart has it. Only `requests` and `limits` are accepted.
+- **Other keys** (chart v0.1.7 or later; an older release rejects them):
+
+  | Key | Merge rule |
+  |---|---|
+  | `image.pullPolicy` | replaces; `Always`, `IfNotPresent` or `Never` |
+  | `replicas` | replaces; whole number, `0` allowed |
+  | `autoscaling` | key by key: `enabled`, `minReplicas`, `maxReplicas`, `targetCPUUtilizationPercentage`, `targetMemoryUtilizationPercentage`. `enabled: false` switches a service's autoscaler off. The top-level `autoscaling.enabled` switch still comes first. |
+  | `probes` | each of `startupProbe` / `readinessProbe` / `livenessProbe` replaces that whole probe; `{}` removes it |
+  | `plainEnv` | key by key |
+  | `command` | replaces the whole list |
+
+  Ports, ingress paths, secrets, `env`, `serviceRefEnv`, `portEnv` and `persistence` stay in
+  `services[]`: changing them per tenant could break routing or the Vault wiring.
 - **Mistakes fail loudly.** A name that is not a service in this chart, a key other than
-  `image` / `resources`, or a value of the wrong shape makes the render fail with a message
+  listed above, or a value of the wrong shape makes the render fail with a message
   naming the entry, instead of being ignored.
-- **Release:** `serviceConfig` needs chart v0.1.2 or later; an older release ignores it.
+- **Release:** `serviceConfig` needs chart v0.1.2 or later (image and resources only); an older release ignores it.
 - The tenant-operator writes this section when it creates the tenant, with the chart's own values
   for every enabled service, and keeps your edits when it rewrites the file. When a tenant is moved
   to a newer chart release it refreshes the values you have not changed and keeps the ones you have.
-- Replica counts are not part of `serviceConfig`; they come from `services[]`.
 
 ## Autoscaling
 

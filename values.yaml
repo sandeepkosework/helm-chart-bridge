@@ -240,22 +240,30 @@ persistence:
 # `enabled: true` in the services[] entry above -- disabledServices always
 # wins over a service's own enabled flag, never the other way around.
 disabledServices: []
-# Per-tenant image and resources, keyed by services[].name. services[] above holds the
+# Per-tenant service settings, keyed by services[].name. services[] above holds the
 # defaults for every tenant; put this in ONE tenant's values file (tenants/<tenant>.yaml,
 # which the tenant-operator fills in) to change that tenant only:
 #
 #   serviceConfig:
 #     bridge:
-#       image: {repository: gitea.example/gitadmin/bridge, tag: v1.4.2}
+#       image: {repository: gitea.example/gitadmin/bridge, tag: v1.4.2, pullPolicy: Always}
 #       resources:
 #         requests: {cpu: 250m, memory: 256Mi}
 #         limits:   {cpu: "1", memory: 2Gi}
+#       replicas: 2
+#       autoscaling: {enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 65}
+#       probes:
+#         readinessProbe: {httpGet: {path: /health, port: 3000}, periodSeconds: 10}
+#       plainEnv: {LOG_LEVEL: debug}
+#       command: [node, server.js]
 #
 # What is given replaces the same value in services[]; what is not given stays as in
-# services[]. Resources are merged key by key, so naming only limits.memory keeps every other
-# request and limit. An empty tag or repository counts as unset. The erep Pod template follows
-# erep-server's entry. A name that is not a service in this chart, or a value of the wrong
-# shape, fails the render with a message saying which.
+# services[]. resources, autoscaling and plainEnv are merged key by key (naming only
+# limits.memory keeps every other request and limit). A probe named under probes replaces that
+# whole probe, and {} removes it. command replaces the whole list. replicas: 0 is honoured. An
+# empty tag or repository counts as unset. The erep Pod template follows erep-server's image.
+# A name that is not a service in this chart, a key outside the list above, or a value of the
+# wrong shape fails the render with a message saying which.
 serviceConfig: {}
 # Where services get their listen port (see each service's `portEnv`).
 #

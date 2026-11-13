@@ -4,6 +4,11 @@
 {{- $portSource := default $.Values.portSource $svc.portSource | default "chart" }}
 {{- if not (has $portSource (list "chart" "secret")) }}{{- fail (printf "service %q: portSource must be chart or secret, got %q" $name $portSource) }}{{- end }}
 {{- $portEnv := ternary (default (list) $svc.portEnv) (list) (eq $portSource "chart") }}
+{{- $svcArgs := dict "svc" $svc "serviceConfig" $.Values.serviceConfig }}
+{{- $cfg := default (dict) (get (default (dict) $.Values.serviceConfig) $name) }}
+{{- $plainEnv := include "tenant-app.plainEnv" $svcArgs | fromYaml }}
+{{- $probes := include "tenant-app.probes" $svcArgs | fromYaml }}
+{{- $command := ternary (get $cfg "command") $svc.command (hasKey $cfg "command") }}
 {{- $ownSecret := eq (include "tenant-app.serviceSecretEnabled" (dict "root" $ "svc" $svc)) "true" }}
 {{- if eq (include "tenant-app.serviceEnabled" (dict "svc" $svc "disabledServices" $.Values.disabledServices)) "true" }}
 apiVersion: apps/v1
@@ -13,7 +18,7 @@ metadata:
   labels:
     {{- include "tenant-app.labels" $ | nindent 4 }}
 spec:
-  replicas: {{ if $.Values.archived }}0{{ else }}{{ $svc.replicas }}{{ end }}
+  replicas: {{ if $.Values.archived }}0{{ else }}{{ include "tenant-app.replicas" $svcArgs }}{{ end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "tenant-app.name" $ }}
@@ -46,10 +51,10 @@ spec:
       containers:
         - name: {{ $name }}
           image: "{{ include "tenant-app.image" (dict "svc" $svc "serviceConfig" $.Values.serviceConfig) }}"
-          imagePullPolicy: {{ $svc.image.pullPolicy }}
-{{- if $svc.command }}
+          imagePullPolicy: {{ include "tenant-app.pullPolicy" $svcArgs }}
+{{- if $command }}
           command:
-{{ toYaml $svc.command | indent 10 }}
+{{ toYaml $command | indent 10 }}
 {{- end }}
 {{- if $svc.ports }}
           ports:
@@ -81,7 +86,7 @@ spec:
 {{- end }}
           env:
 {{- range $key, $value := $.Values.commonEnv }}
-{{- if not (or (hasKey (default (dict) $svc.env) $key) (hasKey (default (dict) $svc.plainEnv) $key) (has $key (default (list) $svc.omitCommonEnv))) }}
+{{- if not (or (hasKey (default (dict) $svc.env) $key) (hasKey $plainEnv $key) (has $key (default (list) $svc.omitCommonEnv))) }}
             # From the top-level commonEnv in values.yaml, same for every
             # service. A service overrides it by setting the key in its own
             # plainEnv, or leaves it out by listing it in omitCommonEnv.
@@ -100,7 +105,7 @@ spec:
             - name: {{ $key }}
               value: {{ if eq $ref.field "host" }}{{ printf "%s-%s" (include "tenant-app.slug" $) $target.name | quote }}{{ else if eq $ref.field "port" }}{{ (index $target.ports 0).containerPort | toString | quote }}{{ else if eq $ref.field "url" }}{{ printf "%s://%s-%s:%d" (default "http" $ref.scheme) (include "tenant-app.slug" $) $target.name (int (index $target.ports 0).containerPort) | quote }}{{ else }}{{ fail (printf "service %q: serviceRefEnv.%s field must be host, port or url" $name $key) }}{{ end }}
 {{- end }}
-{{- range $key, $value := $svc.plainEnv }}
+{{- range $key, $value := $plainEnv }}
             # Reference example: a non-secret value sourced directly from
             # this chart's values.yaml. Only for values that aren't sensitive.
             # May use template expressions (rendered with tpl, like commonEnv).
@@ -108,7 +113,7 @@ spec:
               value: {{ tpl (toString $value) $ | quote }}
 {{- end }}
 {{- range $key := $portEnv }}
-{{- if not (hasKey (default (dict) $svc.plainEnv) $key) }}
+{{- if not (hasKey $plainEnv $key) }}
             # The port this app listens on, set from the first containerPort
             # so it can't drift from the Service/ingress/probes and isn't
             # left empty by an unfilled Vault key. In `env`, so it wins over
@@ -118,7 +123,7 @@ spec:
 {{- end }}
 {{- end }}
 {{- range $probeKey := list "startupProbe" "readinessProbe" "livenessProbe" }}
-{{- with get (default (dict) $svc.probes) $probeKey }}
+{{- with get $probes $probeKey }}
           {{ $probeKey }}:
 {{ toYaml . | indent 12 }}
 {{- end }}
