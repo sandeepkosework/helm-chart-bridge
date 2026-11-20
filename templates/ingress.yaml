@@ -72,6 +72,19 @@ spec:
                 name: {{ printf "%s-%s" (include "tenant-app.slug" $) $svc.name }}
                 port:
                   number: {{ (index $svc.ports 0).containerPort }}
+{{- /* Optional ingressExtraPaths: more paths on THIS service's Ingress, written as complete
+ingress-nginx regexes. They share the Ingress's rewrite-target, so each one must put the
+path to send to the pod in capture group 2, e.g. "/tranops(/)(api/auth(/.*)?$)" with
+rewrite-target "/$2" sends /tranops/api/auth/x to the pod as /api/auth/x. */}}
+{{- range $extra := $svc.ingressExtraPaths }}
+          - path: {{ $extra | quote }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ printf "%s-%s" (include "tenant-app.slug" $) $svc.name }}
+                port:
+                  number: {{ (index $svc.ports 0).containerPort }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

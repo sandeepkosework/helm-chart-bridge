@@ -55,6 +55,9 @@ storage:
 # pod, e.g. ingressPath /galaxy/erepapi/ + ingressRewriteTo "/" turns
 # /galaxy/erepapi/api/ereps into /api/ereps. Without ingressRewriteTo the path
 # is passed through unchanged, in the main Ingress. See templates/ingress.yaml.
+# A service that rewrites can also list `ingressExtraPaths`: more paths added to
+# its same Ingress, each a full regex whose capture group 2 is the path sent to
+# the pod (the rewrite-target is "<ingressRewriteTo>/$2" for all of them).
 ingress:
   enabled: true
   className: nginx
@@ -611,6 +614,13 @@ services:
     - API_PORT
     ingressPath: /controlops/api/
     ingressRewriteTo: "/"
+    # TranOps login/token endpoints, served by the controlops server under /tranops/api/.
+    # The same three routes the compose setup had (nginx vhost.d: /tranops/api/controlops/,
+    # /auth/, /.well-known/ -> controlops-server /api/<same>/): the /tranops prefix is
+    # stripped, the rest is kept. Longer than tranops-backend's /tranops/api, so they win;
+    # every other /tranops/api/... path still goes to tranops-backend.
+    ingressExtraPaths:
+    - '/tranops(/)(api/(controlops|auth|\.well-known)(/.*)?$)'
     # Shared Redis (qraie-redis-shared): host and port come from the chart,
     # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
     serviceRefEnv:
