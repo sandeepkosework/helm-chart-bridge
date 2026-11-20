@@ -1167,7 +1167,10 @@ services:
       targetCPUUtilizationPercentage: 70
     persistence: []
   - name: tranops-ui
-    enabled: true
+    # Off by default: the TranOps UI is now served by the Bridge frontend under /tranops
+    # (the compose nginx sends /tranops to bridge), so this separate UI has no route.
+    # Set enabled: true and an ingressPath again only to run the old standalone UI.
+    enabled: false
     # Which secret layers this service receives via envFrom (see the
     # secrets section at the top). Each is on unless set to false here.
     secrets:
@@ -1186,7 +1189,7 @@ services:
     - PORT
     - VIRTUAL_PORT
     - API_PORT
-    ingressPath: /tranops
+    ingressPath: null
     # Shared Redis (qraie-redis-shared): host and port come from the chart,
     # not Vault. Only REDIS_PASSWORD stays in Vault (service-common).
     serviceRefEnv:
