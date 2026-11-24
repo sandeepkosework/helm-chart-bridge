@@ -549,7 +549,7 @@ services:
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/acetaxi-bridge
-      tag: 'stg'
+      tag: 'prototype'
       pullPolicy: Always
     replicas: 1
     ports:
@@ -604,7 +604,7 @@ services:
       service: true       # layer 3: this service's own secret (serviceSecrets)
     image:
       repository: iad.ocir.io/hbssoc/controlops_server
-      tag: 'stg'
+      tag: 'prototype'
       pullPolicy: Always
     replicas: 1
     ports:
