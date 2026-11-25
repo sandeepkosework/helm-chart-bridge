@@ -11,7 +11,7 @@ tenant:
   namespace: changeme
   domain: changeme.qraie.ai
   # The tenant ID the pods get as TENANT_ID (and wfm-microservice as TENANT_IDS), when it is not
-  # the same as name: for "chetan-bridgestg" the databases hold "chetan", the part before the first
+  # the same as name: for "hbss-bridgestg" the databases hold "hbss", the part before the first
   # hyphen. Empty (the default) means name. Set by the tenant-operator.
   loginId: ""
 # Stopgap while tenant hostnames have no DNS record: adds an /etc/hosts entry
