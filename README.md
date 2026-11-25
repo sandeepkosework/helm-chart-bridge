@@ -265,7 +265,7 @@ it:
 | `qraie-redis-shared` | exec `redis-cli ping` (with `REDIS_PASSWORD`) |
 | `bridge-cp-conductor-redis` | exec `redis-cli -p 6379 ping`, startup + readiness |
 | `mcp-server` | HTTP `GET /health` on 10011, startup + readiness |
-| `enrollment-api` | HTTP `GET /` on 3003 (must match the app's real port) |
+| `enrollment-api` | HTTP `GET /health` on 3003 (must match the app's real port) |
 
 compose's `depends_on: condition: service_healthy` (mcp-client waiting for
 mcp-server) has no equivalent here; readiness only keeps traffic away from a
