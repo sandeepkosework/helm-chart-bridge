@@ -10,6 +10,10 @@ tenant:
   name: changeme
   namespace: changeme
   domain: changeme.qraie.ai
+  # The tenant ID the pods get as TENANT_ID (and wfm-microservice as TENANT_IDS), when it is not
+  # the same as name: for "chetan-bridgestg" the databases hold "chetan", the part before the first
+  # hyphen. Empty (the default) means name. Set by the tenant-operator.
+  loginId: ""
 # Stopgap while tenant hostnames have no DNS record: adds an /etc/hosts entry
 # mapping this tenant's domain (tenant.domain above) to this IP in every pod the
 # chart creates (each service's Deployment and the erep Pod template). Set to ""
@@ -28,9 +32,9 @@ imagePullSecrets:
 # setting it in its own plainEnv, or leaves one out with `omitCommonEnv: [KEY]`.
 # Passwords and keys do NOT belong here.
 commonEnv:
-  # The bare tenant name (tenant.name), not the slug (tenant.id): it names the
-  # tenant's Mongo database (<tenant.name>-bridge), as the operator's seed Job does.
-  TENANT_ID: "{{ .Values.tenant.name }}"
+  # The tenant's login ID (tenant.loginId, which is tenant.name unless the operator sets one), not the
+  # slug (tenant.id): it is the tenant ID the seed Job stores in the databases.
+  TENANT_ID: "{{ .Values.tenant.loginId | default .Values.tenant.name }}"
   VIRTUAL_HOST: "{{ .Values.tenant.domain }}"
 # Pod-level security context for every service's pods. fsGroup makes mounted
 # volumes group-writable for the container's process: PersistentVolumes are
@@ -1017,7 +1021,7 @@ services:
   - name: wfm-microservice
     enabled: true
     # Reads TENANT_IDS, not TENANT_ID: leave the common TENANT_ID out and set
-    # TENANT_IDS to the same tenant name instead.
+    # TENANT_IDS to the same tenant ID instead.
     omitCommonEnv: [TENANT_ID]
     # Which secret layers this service receives via envFrom (see the
     # secrets section at the top). Each is on unless set to false here.
@@ -1046,7 +1050,7 @@ services:
         service: qraie-redis-shared
         field: port
     plainEnv:
-      TENANT_IDS: "{{ .Values.tenant.name }}"
+      TENANT_IDS: "{{ .Values.tenant.loginId | default .Values.tenant.name }}"
     resources:
       requests:
         cpu: 100m
