@@ -1555,7 +1555,7 @@ services:
     probes:
       readinessProbe:
         httpGet:
-          path: /
+          path: /health
           port: 3003
         periodSeconds: 30
         timeoutSeconds: 10
